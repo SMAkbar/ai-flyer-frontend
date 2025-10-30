@@ -10,6 +10,13 @@ export function middleware(req: NextRequest) {
     pathname.startsWith("/_next/") ||
     pathname.startsWith("/public/");
 
+  // If at root, always redirect to dashboard
+  if (pathname === "/") {
+    const url = req.nextUrl.clone();
+    url.pathname = "/dashboard";
+    return NextResponse.redirect(url);
+  }
+
   if (isPublic) return NextResponse.next();
 
   const token = req.cookies.get("token")?.value;

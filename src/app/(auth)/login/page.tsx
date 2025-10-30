@@ -24,7 +24,7 @@ export default function LoginPage() {
     // Store JWT in a cookie for middleware to read
     const token = res.data.access_token;
     const secure = location.protocol === "https:" ? "; Secure" : "";
-    document.cookie = `token=${encodeURIComponent(token)}; Path=/; Max-Age=${60 * 60 * 24}${secure}`;
+    document.cookie = `token=${encodeURIComponent(token)}; Path=/; Max-Age=${60 * 60 * 24}; SameSite=Lax${secure}`;
     router.push("/");
   }
 
