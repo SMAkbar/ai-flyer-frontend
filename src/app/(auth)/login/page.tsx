@@ -3,6 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authApi } from "@/lib/api/auth";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Card } from "@/components/ui/Card";
+import { tokens } from "@/components/theme/tokens";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -29,48 +33,183 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{ maxWidth: 400, margin: "80px auto", padding: 24 }}>
-      <h1 style={{ fontSize: 24, fontWeight: 600, marginBottom: 16 }}>Sign in</h1>
-      <form onSubmit={onSubmit}>
-        <div style={{ marginBottom: 12 }}>
-          <label htmlFor="email" style={{ display: "block", marginBottom: 6 }}>
-            Email
-          </label>
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            style={{ width: "100%", padding: 8, border: "1px solid #ccc", borderRadius: 6 }}
-          />
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "24px",
+        background: `linear-gradient(135deg, ${tokens.bgBase} 0%, ${tokens.bgElevated} 100%)`,
+      }}
+    >
+      <Card
+        style={{
+          width: "100%",
+          maxWidth: "440px",
+          padding: "40px",
+          backgroundColor: tokens.bgElevated,
+          border: `1px solid ${tokens.border}`,
+          boxShadow: "0 8px 32px rgba(0, 0, 0, 0.4)",
+        }}
+      >
+        <div style={{ marginBottom: "32px", textAlign: "center" }}>
+          <h1
+            style={{
+              fontSize: "32px",
+              fontWeight: 700,
+              marginBottom: "8px",
+              color: tokens.textPrimary,
+              letterSpacing: "-0.02em",
+            }}
+          >
+            Welcome back
+          </h1>
+          <p
+            style={{
+              fontSize: "15px",
+              color: tokens.textSecondary,
+              margin: 0,
+            }}
+          >
+            Sign in to your account to continue
+          </p>
         </div>
-        <div style={{ marginBottom: 12 }}>
-          <label htmlFor="password" style={{ display: "block", marginBottom: 6 }}>
-            Password
-          </label>
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            style={{ width: "100%", padding: 8, border: "1px solid #ccc", borderRadius: 6 }}
-          />
-        </div>
-        {error && (
-          <div style={{ color: "#b00020", marginBottom: 12 }}>
-            {error}
+
+        <form onSubmit={onSubmit}>
+          <div style={{ marginBottom: "20px" }}>
+            <label
+              htmlFor="email"
+              style={{
+                display: "block",
+                marginBottom: "8px",
+                fontSize: "14px",
+                fontWeight: 500,
+                color: tokens.textPrimary,
+              }}
+            >
+              Email address
+            </label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              required
+              autoComplete="email"
+              disabled={loading}
+            />
           </div>
-        )}
-        <button
-          type="submit"
-          disabled={loading}
-          style={{ width: "100%", padding: 10, borderRadius: 6, background: "#111827", color: "white" }}
-        >
-          {loading ? "Signing in..." : "Sign in"}
-        </button>
-      </form>
+
+          <div style={{ marginBottom: "24px" }}>
+            <label
+              htmlFor="password"
+              style={{
+                display: "block",
+                marginBottom: "8px",
+                fontSize: "14px",
+                fontWeight: 500,
+                color: tokens.textPrimary,
+              }}
+            >
+              Password
+            </label>
+            <Input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              required
+              autoComplete="current-password"
+              disabled={loading}
+            />
+          </div>
+
+          {error && (
+            <div
+              style={{
+                color: tokens.danger,
+                marginBottom: "20px",
+                padding: "12px 16px",
+                backgroundColor: `${tokens.danger}15`,
+                border: `1px solid ${tokens.danger}40`,
+                borderRadius: "8px",
+                fontSize: "14px",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+                style={{ flexShrink: 0 }}
+              >
+                <path
+                  d="M8 0C3.58 0 0 3.58 0 8s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6zm-1-9h2v6H7V5zm0 8h2v2H7v-2z"
+                  fill="currentColor"
+                />
+              </svg>
+              {error}
+            </div>
+          )}
+
+          <Button
+            type="submit"
+            disabled={loading}
+            variant="primary"
+            style={{
+              width: "100%",
+              padding: "14px 20px",
+              fontSize: "16px",
+              fontWeight: 600,
+              marginTop: "8px",
+              transition: "all 0.2s ease",
+            }}
+          >
+            {loading ? (
+              <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  style={{ animation: "spin 1s linear infinite" }}
+                >
+                  <circle
+                    cx="8"
+                    cy="8"
+                    r="6"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeDasharray="37.7"
+                    strokeDashoffset="28.3"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                Signing in...
+              </span>
+            ) : (
+              "Sign in"
+            )}
+          </Button>
+        </form>
+      </Card>
+
+      <style jsx>{`
+        @keyframes spin {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+      `}</style>
     </div>
   );
 }

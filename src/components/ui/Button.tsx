@@ -26,14 +26,25 @@ export function Button({ variant = 'primary', style, onMouseEnter, onMouseLeave,
     border: `1px solid ${tokens.border}`,
   };
 
-  const merged = { ...base, ...(variant === 'primary' ? primary : secondary), ...style } as React.CSSProperties;
+  const merged = { 
+    ...base, 
+    ...(variant === 'primary' ? primary : secondary), 
+    ...(rest.disabled ? { 
+      opacity: 0.6, 
+      cursor: 'not-allowed',
+    } : {}),
+    transition: 'all 0.2s ease',
+    ...style 
+  } as React.CSSProperties;
 
   const handleEnter = (e: React.MouseEvent<HTMLButtonElement>) => {
-    if (variant === 'primary') e.currentTarget.style.backgroundColor = tokens.accentHover;
+    if (rest.disabled || variant !== 'primary') return;
+    e.currentTarget.style.backgroundColor = tokens.accentHover;
     onMouseEnter?.(e);
   };
   const handleLeave = (e: React.MouseEvent<HTMLButtonElement>) => {
-    if (variant === 'primary') e.currentTarget.style.backgroundColor = tokens.accent;
+    if (rest.disabled || variant !== 'primary') return;
+    e.currentTarget.style.backgroundColor = tokens.accent;
     onMouseLeave?.(e);
   };
 
