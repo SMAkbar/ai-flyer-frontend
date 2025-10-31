@@ -2,12 +2,20 @@
 import React from 'react';
 import { styles } from '../theme/tokens';
 
-export function Card({ children, hoverElevate }: { children: React.ReactNode; hoverElevate?: boolean }) {
+type CardProps = {
+  children: React.ReactNode;
+  hoverElevate?: boolean;
+  onClick?: () => void;
+  style?: React.CSSProperties;
+};
+
+export function Card({ children, hoverElevate, onClick, style }: CardProps) {
   const base = styles.card as React.CSSProperties;
   const transition = hoverElevate ? { transition: 'transform 120ms ease, box-shadow 120ms ease' } : {};
   return (
     <div
-      style={{ ...base, ...transition }}
+      style={{ ...base, ...transition, ...style }}
+      onClick={onClick}
       onMouseEnter={(e) => {
         if (!hoverElevate) return;
         (e.currentTarget as HTMLDivElement).style.transform = 'scale(1.03)';

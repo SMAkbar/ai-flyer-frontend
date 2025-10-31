@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { tokens } from "@/components/theme/tokens";
 import type { FlyerRead } from "@/lib/api/flyers";
@@ -10,6 +11,8 @@ type FlyerCardProps = {
 };
 
 export function FlyerCard({ flyer }: FlyerCardProps) {
+  const router = useRouter();
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
@@ -19,8 +22,12 @@ export function FlyerCard({ flyer }: FlyerCardProps) {
     });
   };
 
+  const handleClick = () => {
+    router.push(`/flyers/${flyer.id}`);
+  };
+
   return (
-    <Card hoverElevate>
+    <Card hoverElevate onClick={handleClick} style={{ cursor: "pointer" }}>
       <div style={{ position: "relative", width: "100%", aspectRatio: "16/9", borderRadius: 8, overflow: "hidden", marginBottom: 12 }}>
         <img
           src={flyer.cloudfront_url}
