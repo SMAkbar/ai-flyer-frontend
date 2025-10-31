@@ -27,10 +27,6 @@ export default function ProfilePage() {
     setIsLoading(false);
 
     if (!res.ok) {
-      if (res.error.status === 401) {
-        router.push("/login");
-        return;
-      }
       setError(res.error.message || "Failed to load profile");
       return;
     }
@@ -47,10 +43,6 @@ export default function ProfilePage() {
     setIsSaving(false);
 
     if (!res.ok) {
-      if (res.error.status === 401) {
-        router.push("/login");
-        return;
-      }
       setError(res.error.message || "Failed to update profile");
       return;
     }

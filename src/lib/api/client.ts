@@ -28,9 +28,23 @@ async function request<T>(path: string, init?: RequestInit): Promise<Result<T>> 
     const res = await fetch(`${BASE_URL}${path}`, { ...init, headers, credentials: "include" });
     const text = await res.text();
     const json = text ? JSON.parse(text) : null;
+    
+    // Handle 401 Unauthorized first - clear invalid token and redirect to login
+    if (!res.ok && res.status === 401) {
+      // Clear the invalid token cookie
+      if (typeof document !== "undefined") {
+        document.cookie = "token=; Path=/; Max-Age=0; SameSite=Lax";
+        // Redirect to login page immediately
+        window.location.href = "/login";
+      }
+      // Return error result (redirect will happen, but this ensures proper typing)
+      return { ok: false, error: { status: res.status, message: json?.detail || res.statusText } };
+    }
+    
     if (!res.ok) {
       return { ok: false, error: { status: res.status, message: json?.detail || res.statusText } };
     }
+    
     return { ok: true, data: json as T };
   } catch (e) {
     return { ok: false, error: { status: 0, message: (e as Error).message } };
