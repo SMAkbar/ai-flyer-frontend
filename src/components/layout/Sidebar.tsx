@@ -31,7 +31,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
       <nav className="px-2 py-2 space-y-1">
         <SidebarItem href="/dashboard" collapsed={collapsed} label="Dashboard" />
+        <SidebarItem href="/flyers" collapsed={collapsed} label="Flyers" />
         <SidebarItem href="/team" collapsed={collapsed} label="Team" />
+        <SidebarItem href="/profile" collapsed={collapsed} label="Profile" />
         <SidebarItem href="/" collapsed={collapsed} label="Home" />
       </nav>
     </aside>

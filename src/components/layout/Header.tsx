@@ -1,12 +1,14 @@
 "use client";
 
 import type { MouseEventHandler } from "react";
+import { UserMenu } from "./UserMenu";
 
 export type HeaderProps = {
   onToggleSidebar: MouseEventHandler<HTMLButtonElement>;
+  userEmail?: string;
 };
 
-export function Header({ onToggleSidebar }: HeaderProps) {
+export function Header({ onToggleSidebar, userEmail }: HeaderProps) {
   return (
     <header className="h-14 sticky top-0 z-10 border-b border-black/10 dark:border-white/10 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="h-full flex items-center gap-3 px-4">
@@ -19,7 +21,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
         </button>
         <div className="font-semibold text-sm">App</div>
         <div className="ml-auto flex items-center gap-2">
-          <div className="text-xs opacity-70">Signed in</div>
+          <UserMenu userEmail={userEmail} />
         </div>
       </div>
     </header>

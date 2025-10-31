@@ -15,7 +15,11 @@ function getAuthTokenFromCookie(): string | null {
 
 async function request<T>(path: string, init?: RequestInit): Promise<Result<T>> {
   const headers = new Headers(init?.headers);
-  headers.set("Content-Type", "application/json");
+  
+  // Only set Content-Type to JSON if body is not FormData
+  if (!(init?.body instanceof FormData)) {
+    headers.set("Content-Type", "application/json");
+  }
 
   const token = getAuthTokenFromCookie();
   if (token) headers.set("Authorization", `Bearer ${token}`);
@@ -37,8 +41,12 @@ export const apiClient = {
   get: <T>(path: string) => request<T>(path),
   post: <T, B = unknown>(path: string, body?: B) =>
     request<T>(path, { method: "POST", body: body ? JSON.stringify(body) : undefined }),
+  postForm: <T>(path: string, formData: FormData) =>
+    request<T>(path, { method: "POST", body: formData }),
   put: <T, B = unknown>(path: string, body?: B) =>
     request<T>(path, { method: "PUT", body: body ? JSON.stringify(body) : undefined }),
+  patch: <T, B = unknown>(path: string, body?: B) =>
+    request<T>(path, { method: "PATCH", body: body ? JSON.stringify(body) : undefined }),
   del: <T>(path: string) => request<T>(path, { method: "DELETE" }),
 };
 
