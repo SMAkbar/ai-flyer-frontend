@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
+import { tokens } from "@/components/theme/tokens";
 
 export type ShellProps = {
   children: React.ReactNode;
@@ -12,15 +13,29 @@ export function Shell({ children }: ShellProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   return (
-    <div className="min-h-screen flex bg-background text-foreground">
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        backgroundColor: tokens.bgBase,
+        color: tokens.textPrimary,
+      }}
+    >
       <Sidebar
         collapsed={isCollapsed}
         onToggle={() => setIsCollapsed((prev) => !prev)}
       />
-      <div className="flex-1 flex min-w-0">
-        <div className="flex-1 flex flex-col min-w-0">
+      <div style={{ flex: 1, display: "flex", minWidth: 0 }}>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
           <Header onToggleSidebar={() => setIsCollapsed((p) => !p)} />
-          <main className="flex-1 min-w-0 p-4 md:p-6 lg:p-8">
+          <main
+            style={{
+              flex: 1,
+              minWidth: 0,
+              padding: "24px",
+              overflowY: "auto",
+            }}
+          >
             {children}
           </main>
         </div>
