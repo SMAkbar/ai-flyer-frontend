@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import { AvatarPreview } from "./AvatarPreview";
 import type { UserProfileRead, UserUpdate } from "@/lib/api/user";
 import { tokens } from "@/components/theme/tokens";
-import { MailIcon, MapPinIcon, BriefcaseIcon } from "@/components/icons";
+import { MailIcon, MapPinIcon, BriefcaseIcon, ProfileIcon } from "@/components/icons";
 
 type ProfileFormProps = {
   user: UserProfileRead;

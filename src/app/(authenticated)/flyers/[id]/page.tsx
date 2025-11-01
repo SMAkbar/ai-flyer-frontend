@@ -1,16 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
-import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
+import { useParams } from "next/navigation";
+import { PageLayout } from "@/components/ui/PageLayout";
+import { Container } from "@/components/ui/Container";
+import { BackButton } from "@/components/ui/BackButton";
 import { flyersApi, type FlyerDetailRead } from "@/lib/api/flyers";
-import { tokens } from "@/components/theme/tokens";
-import { ArrowLeftIcon, CubeIcon, CheckIcon } from "@/components/icons";
+import { FlyerImageCard } from "@/components/flyers/FlyerImageCard";
+import { FlyerHeader } from "@/components/flyers/FlyerHeader";
+import { ExtractionCard } from "@/components/flyers/ExtractionCard";
 import { GeneratedImagesSection } from "@/components/flyers/GeneratedImagesSection";
 
 export default function FlyerDetailPage() {
-  const router = useRouter();
   const params = useParams();
   const flyerId = params?.id ? parseInt(params.id as string, 10) : null;
 
@@ -48,20 +49,13 @@ export default function FlyerDetailPage() {
     }
   }
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
   const handleFieldEdit = (fieldName: string, currentValue: string | null) => {
     setEditingField(fieldName);
     setEditingValue(currentValue || "");
+  };
+
+  const handleFieldChange = (value: string) => {
+    setEditingValue(value);
   };
 
   const handleFieldSave = async (fieldName: string) => {
@@ -102,736 +96,75 @@ export default function FlyerDetailPage() {
     setEditingValue("");
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent, fieldName: string) => {
-    if (e.key === "Enter") {
-      handleFieldSave(fieldName);
-    } else if (e.key === "Escape") {
-      handleFieldCancel();
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <div
-        style={{
-          width: "90%",
-          maxWidth: "1600px",
-          margin: "0 auto",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: "400px",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "12px",
-            color: tokens.textSecondary,
-            fontSize: "16px",
-          }}
-        >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 20 20"
-            fill="none"
-            style={{ animation: "spin 1s linear infinite" }}
-          >
-            <circle
-              cx="10"
-              cy="10"
-              r="7"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeDasharray="44"
-              strokeDashoffset="33"
-              strokeLinecap="round"
-            />
-          </svg>
-          Loading flyer details...
-          <style jsx>{`
-            @keyframes spin {
-              from {
-                transform: rotate(0deg);
-              }
-              to {
-                transform: rotate(360deg);
-              }
-            }
-          `}</style>
-        </div>
-      </div>
-    );
-  }
-
-  if (error || !flyer) {
-    return (
-      <div
-        style={{
-          width: "90%",
-          maxWidth: "1600px",
-          margin: "0 auto",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: "400px",
-          gap: "16px",
-        }}
-      >
-        <div
-          style={{
-            color: tokens.danger,
-            fontSize: "16px",
-            marginBottom: "8px",
-          }}
-        >
-          {error || "Flyer not found"}
-        </div>
-        <Button onClick={() => router.back()}>Go Back</Button>
-      </div>
-    );
-  }
-
-  const extraction = flyer.information_extraction;
-
   return (
-    <div
-      style={{
-        width: "90%",
-        maxWidth: "1600px",
-        margin: "0 auto",
-      }}
+    <PageLayout
+      isLoading={isLoading}
+      loadingMessage="Loading flyer details..."
+      error={error || (!flyer ? "Flyer not found" : null)}
+      onRetry={loadFlyer}
     >
-      <div style={{ marginBottom: "24px" }}>
-        <Button
-          variant="secondary"
-          onClick={() => router.back()}
-          style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-        }}
-      >
-        <ArrowLeftIcon size={20} color="currentColor" />
-        <span>Back</span>
-      </Button>
-      </div>
+      <Container>
+        <div style={{ marginBottom: "24px" }}>
+          <BackButton />
+        </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "350px 1fr",
-          gap: "12px",
-          marginBottom: "32px",
-          alignItems: "start",
-        }}
-      >
-        {/* Flyer Image */}
-        <div style={{ width: "350px", margin: 0, padding: 0 }}>
-          <Card
-            style={{
-              padding: 0,
-              margin: 0,
-              backgroundColor: tokens.bgElevated,
-              border: `1px solid ${tokens.border}`,
-              borderRadius: "20px",
-              overflow: "hidden",
-            }}
-          >
+        {flyer && (
+          <>
             <div
               style={{
-                position: "relative",
-                width: "100%",
-                aspectRatio: "4/5",
-                overflow: "hidden",
-                backgroundColor: tokens.bgHover,
+                display: "grid",
+                gridTemplateColumns: "350px 1fr",
+                gap: "12px",
+                marginBottom: "32px",
+                alignItems: "start",
               }}
             >
-              <img
-                src={flyer.cloudfront_url}
-                alt={flyer.title}
+              <FlyerImageCard imageUrl={flyer.cloudfront_url} alt={flyer.title} />
+
+              <div
                 style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "24px",
+                  margin: 0,
+                  padding: 0,
                   width: "100%",
-                  height: "100%",
-                  objectFit: "contain",
-                }}
-              />
-            </div>
-          </Card>
-        </div>
-
-        {/* Flyer Details */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "24px", margin: 0, padding: 0, width: "100%", minWidth: 0 }}>
-          <div>
-            <h1
-              style={{
-                fontSize: "36px",
-                fontWeight: 700,
-                color: tokens.textPrimary,
-                marginBottom: "12px",
-                letterSpacing: "-0.02em",
-                lineHeight: 1.2,
-              }}
-            >
-              {flyer.title}
-            </h1>
-            {flyer.description && (
-              <p
-                style={{
-                  fontSize: "16px",
-                  color: tokens.textSecondary,
-                  lineHeight: 1.6,
-                  marginBottom: "16px",
+                  minWidth: 0,
                 }}
               >
-                {flyer.description}
-              </p>
+                <FlyerHeader
+                  title={flyer.title}
+                  description={flyer.description}
+                  createdAt={flyer.created_at}
+                />
+
+                <ExtractionCard
+                  extraction={flyer.information_extraction}
+                  editingField={editingField}
+                  editingValue={editingValue}
+                  isUpdating={isUpdating}
+                  onFieldEdit={handleFieldEdit}
+                  onFieldChange={handleFieldChange}
+                  onFieldSave={handleFieldSave}
+                  onFieldCancel={handleFieldCancel}
+                />
+              </div>
+            </div>
+
+            {flyer.information_extraction?.status === "completed" && (
+              <div style={{ marginTop: "24px" }}>
+                <GeneratedImagesSection
+                  images={flyer.generated_images}
+                  isLoading={
+                    !flyer.generated_images || flyer.generated_images.length === 0
+                  }
+                />
+              </div>
             )}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                fontSize: "14px",
-                color: tokens.textMuted,
-              }}
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <polyline points="12,6 12,12 16,14" />
-              </svg>
-              Created {formatDate(flyer.created_at)}
-            </div>
-          </div>
-
-          {/* Extracted Information */}
-          {extraction && (
-            <Card
-              style={{
-                backgroundColor: tokens.bgElevated,
-                border: `1px solid ${tokens.border}`,
-                borderRadius: "16px",
-                padding: "28px",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  marginBottom: "24px",
-                  flexWrap: "wrap",
-                  gap: "12px",
-                }}
-              >
-                <h2
-                  style={{
-                    fontSize: "20px",
-                    fontWeight: 600,
-                    color: tokens.textPrimary,
-                    margin: 0,
-                    letterSpacing: "-0.01em",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "10px",
-                  }}
-                >
-                  <CubeIcon size={20} color="currentColor" />
-                  Extracted Information
-                </h2>
-                <span
-                  style={{
-                    padding: "6px 12px",
-                    borderRadius: "8px",
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    backgroundColor:
-                      extraction.status === "completed"
-                        ? `${tokens.success}15`
-                        : extraction.status === "processing"
-                        ? `${tokens.accent}15`
-                        : extraction.status === "failed"
-                        ? `${tokens.danger}15`
-                        : `${tokens.textMuted}15`,
-                    color:
-                      extraction.status === "completed"
-                        ? tokens.success
-                        : extraction.status === "processing"
-                        ? tokens.accent
-                        : extraction.status === "failed"
-                        ? tokens.danger
-                        : tokens.textMuted,
-                    border: `1px solid ${
-                      extraction.status === "completed"
-                        ? tokens.success
-                        : extraction.status === "processing"
-                        ? tokens.accent
-                        : extraction.status === "failed"
-                        ? tokens.danger
-                        : tokens.border
-                    }40`,
-                  }}
-                >
-                  {extraction.status.charAt(0).toUpperCase() + extraction.status.slice(1)}
-                </span>
-              </div>
-
-              {extraction.status === "completed" ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-                  <div>
-                    <div
-                      style={{
-                        fontSize: "12px",
-                        fontWeight: 500,
-                        color: tokens.textMuted,
-                        marginBottom: "6px",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.05em",
-                      }}
-                    >
-                      Event Date/Time
-                    </div>
-                    {editingField === "event_date_time" ? (
-                      <input
-                        type="text"
-                        value={editingValue}
-                        onChange={(e) => setEditingValue(e.target.value)}
-                        onBlur={() => handleFieldSave("event_date_time")}
-                        onKeyDown={(e) => handleKeyDown(e, "event_date_time")}
-                        disabled={isUpdating}
-                        autoFocus
-                        style={{
-                          width: "100%",
-                          fontSize: "16px",
-                          color: tokens.textPrimary,
-                          fontWeight: 500,
-                          padding: "8px 12px",
-                          backgroundColor: tokens.bgElevated,
-                          border: `1px solid ${tokens.border}`,
-                          borderRadius: "8px",
-                          outline: "none",
-                          fontFamily: "inherit",
-                        }}
-                      />
-                    ) : (
-                      <div
-                        onClick={() => handleFieldEdit("event_date_time", extraction.event_date_time)}
-                        style={{
-                          fontSize: "16px",
-                          color: tokens.textPrimary,
-                          fontWeight: 500,
-                          padding: "8px 12px",
-                          backgroundColor: tokens.bgElevated,
-                          border: `1px solid ${tokens.border}`,
-                          borderRadius: "8px",
-                          cursor: "text",
-                          minHeight: "24px",
-                        }}
-                      >
-                        {extraction.event_date_time || "Click to edit"}
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <div
-                      style={{
-                        fontSize: "12px",
-                        fontWeight: 500,
-                        color: tokens.textMuted,
-                        marginBottom: "6px",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.05em",
-                      }}
-                    >
-                      Location
-                    </div>
-                    {editingField === "location_town_city" ? (
-                      <input
-                        type="text"
-                        value={editingValue}
-                        onChange={(e) => setEditingValue(e.target.value)}
-                        onBlur={() => handleFieldSave("location_town_city")}
-                        onKeyDown={(e) => handleKeyDown(e, "location_town_city")}
-                        disabled={isUpdating}
-                        autoFocus
-                        style={{
-                          width: "100%",
-                          fontSize: "16px",
-                          color: tokens.textPrimary,
-                          fontWeight: 500,
-                          padding: "8px 12px",
-                          backgroundColor: tokens.bgElevated,
-                          border: `1px solid ${tokens.border}`,
-                          borderRadius: "8px",
-                          outline: "none",
-                          fontFamily: "inherit",
-                        }}
-                      />
-                    ) : (
-                      <div
-                        onClick={() => handleFieldEdit("location_town_city", extraction.location_town_city)}
-                        style={{
-                          fontSize: "16px",
-                          color: tokens.textPrimary,
-                          fontWeight: 500,
-                          padding: "8px 12px",
-                          backgroundColor: tokens.bgElevated,
-                          border: `1px solid ${tokens.border}`,
-                          borderRadius: "8px",
-                          cursor: "text",
-                          minHeight: "24px",
-                        }}
-                      >
-                        {extraction.location_town_city || "Click to edit"}
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <div
-                      style={{
-                        fontSize: "12px",
-                        fontWeight: 500,
-                        color: tokens.textMuted,
-                        marginBottom: "6px",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.05em",
-                      }}
-                    >
-                      Event Title
-                    </div>
-                    {editingField === "event_title" ? (
-                      <input
-                        type="text"
-                        value={editingValue}
-                        onChange={(e) => setEditingValue(e.target.value)}
-                        onBlur={() => handleFieldSave("event_title")}
-                        onKeyDown={(e) => handleKeyDown(e, "event_title")}
-                        disabled={isUpdating}
-                        autoFocus
-                        style={{
-                          width: "100%",
-                          fontSize: "16px",
-                          color: tokens.textPrimary,
-                          fontWeight: 500,
-                          padding: "8px 12px",
-                          backgroundColor: tokens.bgElevated,
-                          border: `1px solid ${tokens.border}`,
-                          borderRadius: "8px",
-                          outline: "none",
-                          fontFamily: "inherit",
-                        }}
-                      />
-                    ) : (
-                      <div
-                        onClick={() => handleFieldEdit("event_title", extraction.event_title)}
-                        style={{
-                          fontSize: "16px",
-                          color: tokens.textPrimary,
-                          fontWeight: 500,
-                          padding: "8px 12px",
-                          backgroundColor: tokens.bgElevated,
-                          border: `1px solid ${tokens.border}`,
-                          borderRadius: "8px",
-                          cursor: "text",
-                          minHeight: "24px",
-                        }}
-                      >
-                        {extraction.event_title || "Click to edit"}
-                      </div>
-                    )}
-                  </div>
-
-                  {extraction.venue_name && (
-                    <div>
-                      <div
-                        style={{
-                          fontSize: "12px",
-                          fontWeight: 500,
-                          color: tokens.textMuted,
-                          marginBottom: "6px",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.05em",
-                        }}
-                      >
-                        Venue
-                      </div>
-                      <div
-                        style={{
-                          fontSize: "16px",
-                          color: tokens.textPrimary,
-                          fontWeight: 500,
-                        }}
-                      >
-                        {extraction.venue_name}
-                      </div>
-                    </div>
-                  )}
-
-                  <div>
-                    <div
-                      style={{
-                        fontSize: "12px",
-                        fontWeight: 500,
-                        color: tokens.textMuted,
-                        marginBottom: "6px",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.05em",
-                      }}
-                    >
-                      Performers/DJs/Soundsystems
-                    </div>
-                    {editingField === "performers_djs_soundsystems" ? (
-                      <input
-                        type="text"
-                        value={editingValue}
-                        onChange={(e) => setEditingValue(e.target.value)}
-                        onBlur={() => handleFieldSave("performers_djs_soundsystems")}
-                        onKeyDown={(e) => handleKeyDown(e, "performers_djs_soundsystems")}
-                        disabled={isUpdating}
-                        autoFocus
-                        style={{
-                          width: "100%",
-                          fontSize: "16px",
-                          color: tokens.textPrimary,
-                          fontWeight: 500,
-                          padding: "8px 12px",
-                          backgroundColor: tokens.bgElevated,
-                          border: `1px solid ${tokens.border}`,
-                          borderRadius: "8px",
-                          outline: "none",
-                          fontFamily: "inherit",
-                        }}
-                      />
-                    ) : (
-                      <div
-                        onClick={() => handleFieldEdit("performers_djs_soundsystems", extraction.performers_djs_soundsystems)}
-                        style={{
-                          fontSize: "16px",
-                          color: tokens.textPrimary,
-                          fontWeight: 500,
-                          padding: "8px 12px",
-                          backgroundColor: tokens.bgElevated,
-                          border: `1px solid ${tokens.border}`,
-                          borderRadius: "8px",
-                          cursor: "text",
-                          minHeight: "24px",
-                        }}
-                      >
-                        {extraction.performers_djs_soundsystems || "Click to edit"}
-                      </div>
-                    )}
-                  </div>
-
-                  {extraction.confidence_level && (
-                    <div>
-                      <div
-                        style={{
-                          fontSize: "12px",
-                          fontWeight: 500,
-                          color: tokens.textMuted,
-                          marginBottom: "6px",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.05em",
-                        }}
-                      >
-                        Confidence Level
-                      </div>
-                      <div
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "8px",
-                          padding: "8px 14px",
-                          borderRadius: "8px",
-                          backgroundColor: `${tokens.success}15`,
-                          border: `1px solid ${tokens.success}40`,
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontSize: "18px",
-                            fontWeight: 700,
-                            color: tokens.success,
-                          }}
-                        >
-                          {Math.round(parseFloat(extraction.confidence_level) * 100)}%
-                        </div>
-                        <CheckIcon size={16} color={tokens.success} />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : extraction.status === "processing" ? (
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "12px",
-                    color: tokens.textSecondary,
-                    padding: "16px",
-                    backgroundColor: tokens.bgHover,
-                    borderRadius: "12px",
-                    border: `1px solid ${tokens.border}`,
-                  }}
-                >
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 20 20"
-                    fill="none"
-                    style={{ animation: "spin 1s linear infinite", flexShrink: 0 }}
-                  >
-                    <circle
-                      cx="10"
-                      cy="10"
-                      r="7"
-                      stroke={tokens.accent}
-                      strokeWidth="2"
-                      strokeDasharray="44"
-                      strokeDashoffset="33"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                  Extracting information from flyer image...
-                  <style jsx>{`
-                    @keyframes spin {
-                      from {
-                        transform: rotate(0deg);
-                      }
-                      to {
-                        transform: rotate(360deg);
-                      }
-                    }
-                  `}</style>
-                </div>
-              ) : extraction.status === "failed" ? (
-                <div
-                  style={{
-                    padding: "16px",
-                    backgroundColor: `${tokens.danger}15`,
-                    borderRadius: "12px",
-                    border: `1px solid ${tokens.danger}40`,
-                  }}
-                >
-                  <div
-                    style={{
-                      color: tokens.danger,
-                      fontSize: "15px",
-                      fontWeight: 600,
-                      marginBottom: "8px",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                    }}
-                  >
-                    <svg
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <circle cx="12" cy="12" r="10" />
-                      <line x1="12" y1="8" x2="12" y2="12" />
-                      <line x1="12" y1="16" x2="12.01" y2="16" />
-                    </svg>
-                    Extraction failed
-                  </div>
-                  {extraction.error_message && (
-                    <p
-                      style={{
-                        fontSize: "14px",
-                        color: tokens.textSecondary,
-                        margin: 0,
-                      }}
-                    >
-                      {extraction.error_message}
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <div
-                  style={{
-                    padding: "16px",
-                    backgroundColor: tokens.bgHover,
-                    borderRadius: "12px",
-                    border: `1px solid ${tokens.border}`,
-                    color: tokens.textSecondary,
-                    fontSize: "15px",
-                  }}
-                >
-                  Extraction not yet started
-                </div>
-              )}
-            </Card>
-          )}
-
-          {!extraction && (
-            <Card
-              style={{
-                backgroundColor: tokens.bgElevated,
-                border: `1px solid ${tokens.border}`,
-                borderRadius: "16px",
-                padding: "28px",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "12px",
-                  color: tokens.textSecondary,
-                  fontSize: "15px",
-                }}
-              >
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <circle cx="12" cy="12" r="10" />
-                  <polyline points="12,6 12,12 16,14" />
-                </svg>
-                No extracted information available yet. Extraction may still be processing.
-              </div>
-            </Card>
-          )}
-        </div>
-      </div>
-
-      {/* Generated Images Section */}
-      <div style={{ marginTop: "24px" }}>
-        <GeneratedImagesSection
-          images={flyer.generated_images}
-          isLoading={
-            extraction?.status === "completed" &&
-            (!flyer.generated_images || flyer.generated_images.length === 0)
-          }
-        />
-      </div>
-    </div>
+          </>
+        )}
+      </Container>
+    </PageLayout>
   );
 }
 
