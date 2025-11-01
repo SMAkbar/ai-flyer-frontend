@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { tokens } from "@/components/theme/tokens";
+import { ProfileIcon, LogoutIcon } from "@/components/icons";
 
 type UserMenuProps = {
   userEmail?: string;
@@ -99,19 +100,7 @@ export function UserMenu({ userEmail }: UserMenuProps) {
         {userEmail ? (
           <span>{getInitials(userEmail)}</span>
         ) : (
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-            <circle cx="12" cy="7" r="4" />
-          </svg>
+          <ProfileIcon size={20} color="currentColor" />
         )}
       </button>
 
@@ -167,18 +156,7 @@ export function UserMenu({ userEmail }: UserMenuProps) {
                 e.currentTarget.style.backgroundColor = "transparent";
               }}
             >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
+              <ProfileIcon size={18} color="currentColor" />
               Profile
             </Link>
             <button
@@ -206,18 +184,7 @@ export function UserMenu({ userEmail }: UserMenuProps) {
                 e.currentTarget.style.backgroundColor = "transparent";
               }}
             >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
-              </svg>
+              <LogoutIcon size={18} color="currentColor" />
               Logout
             </button>
           </div>

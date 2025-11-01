@@ -20,7 +20,7 @@ import {
   BellIcon,
 } from "@/components/icons";
 
-export default function ThemePage() {
+export default function TeamPage() {
   return (
     <main style={{ backgroundColor: tokens.bgBase, color: tokens.textPrimary, minHeight: "100vh" }}>
       <div
@@ -55,7 +55,7 @@ export default function ThemePage() {
                 marginBottom: "12px",
               }}
             >
-              Theme
+              Our Team
             </h1>
             <p
               style={{
@@ -66,7 +66,7 @@ export default function ThemePage() {
                 maxWidth: "600px",
               }}
             >
-              Explore our design system and component gallery showcasing modern UI elements and design patterns.
+              Meet the talented people who build exceptional experiences. Explore our component gallery showcasing modern UI elements and design patterns.
             </p>
           </div>
           <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>

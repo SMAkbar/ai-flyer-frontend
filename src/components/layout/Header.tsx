@@ -3,6 +3,7 @@
 import type { MouseEventHandler } from "react";
 import { UserMenu } from "./UserMenu";
 import { tokens } from "@/components/theme/tokens";
+import { MenuIcon } from "@/components/icons";
 
 export type HeaderProps = {
   onToggleSidebar: MouseEventHandler<HTMLButtonElement>;
@@ -59,18 +60,7 @@ export function Header({ onToggleSidebar, userEmail }: HeaderProps) {
             e.currentTarget.style.color = tokens.textSecondary;
           }}
         >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 20 20"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M4 6h12M4 12h12M4 18h12" />
-          </svg>
+          <MenuIcon size={20} color="currentColor" />
         </button>
         <div
           style={{

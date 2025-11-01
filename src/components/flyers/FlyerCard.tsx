@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { tokens } from "@/components/theme/tokens";
+import { ImageIcon, ExternalLinkIcon, ClockIcon } from "@/components/icons";
 import type { FlyerRead } from "@/lib/api/flyers";
 
 type FlyerCardProps = {
@@ -76,22 +77,9 @@ export function FlyerCard({ flyer }: FlyerCardProps) {
               justifyContent: "center",
               backgroundColor: tokens.bgHover,
             }}
-          >
-            <svg
-              width="48"
-              height="48"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke={tokens.textMuted}
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
             >
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-              <circle cx="8.5" cy="8.5" r="1.5" />
-              <polyline points="21,15 16,10 5,21" />
-            </svg>
-          </div>
+              <ImageIcon size={48} color={tokens.textMuted} strokeWidth="1.5" />
+            </div>
         )}
         <div
           style={{
@@ -118,18 +106,7 @@ export function FlyerCard({ flyer }: FlyerCardProps) {
               gap: "6px",
             }}
           >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" />
-            </svg>
+            <ExternalLinkIcon size={14} color="currentColor" />
             View Details
           </span>
         </div>
@@ -176,19 +153,7 @@ export function FlyerCard({ flyer }: FlyerCardProps) {
             borderTop: `1px solid ${tokens.border}`,
           }}
         >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <polyline points="12,6 12,12 16,14" />
-          </svg>
+          <ClockIcon size={14} color="currentColor" />
           {formatDate(flyer.created_at)}
         </div>
       </div>

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { flyersApi, type FlyerDetailRead } from "@/lib/api/flyers";
 import { tokens } from "@/components/theme/tokens";
+import { ArrowLeftIcon, CubeIcon, CheckIcon } from "@/components/icons";
 
 export default function FlyerDetailPage() {
   const router = useRouter();
@@ -154,25 +155,14 @@ export default function FlyerDetailPage() {
           variant="secondary"
           onClick={() => router.back()}
           style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-          }}
-        >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M19 12H5M12 19l-7-7 7-7" />
-          </svg>
-          Back
-        </Button>
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+        }}
+      >
+        <ArrowLeftIcon size={20} color="currentColor" />
+        <span>Back</span>
+      </Button>
       </div>
 
       <div
@@ -301,23 +291,7 @@ export default function FlyerDetailPage() {
                     gap: "10px",
                   }}
                 >
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" />
-                    <polyline points="7.5,4.21 12,6.81 16.5,4.21" />
-                    <polyline points="7.5,19.79 7.5,14.6 3,12" />
-                    <polyline points="21,12 16.5,14.6 16.5,19.79" />
-                    <polyline points="3.27,6.96 12,12.01 20.73,6.96" />
-                    <line x1="12" y1="22.08" x2="12" y2="12" />
-                  </svg>
+                  <CubeIcon size={20} color="currentColor" />
                   Extracted Information
                 </h2>
                 <span
@@ -523,18 +497,7 @@ export default function FlyerDetailPage() {
                         >
                           {Math.round(parseFloat(extraction.confidence_level) * 100)}%
                         </div>
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke={tokens.success}
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-                        </svg>
+                        <CheckIcon size={16} color={tokens.success} />
                       </div>
                     </div>
                   )}

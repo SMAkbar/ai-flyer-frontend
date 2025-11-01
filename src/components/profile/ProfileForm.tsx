@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import { AvatarPreview } from "./AvatarPreview";
 import type { UserProfileRead, UserUpdate } from "@/lib/api/user";
 import { tokens } from "@/components/theme/tokens";
+import { MailIcon, MapPinIcon, BriefcaseIcon } from "@/components/icons";
 
 type ProfileFormProps = {
   user: UserProfileRead;
@@ -184,20 +185,8 @@ export function ProfileForm({ user, onSave, onCancel, isLoading }: ProfileFormPr
                   gap: "8px",
                 }}
               >
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                  <polyline points="22,6 12,13 2,6" />
-                </svg>
-                {user.email}
+                  <MailIcon size={18} color="currentColor" />
+                  {user.email}
               </div>
             </div>
           </div>
@@ -241,19 +230,7 @@ export function ProfileForm({ user, onSave, onCancel, isLoading }: ProfileFormPr
                 gap: "10px",
               }}
             >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
+              <ProfileIcon size={18} color="currentColor" />
               Personal Details
             </h2>
           <FormField label="Email" hint="Email cannot be changed">
@@ -323,19 +300,7 @@ export function ProfileForm({ user, onSave, onCancel, isLoading }: ProfileFormPr
                 gap: "10px",
               }}
             >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                <circle cx="12" cy="10" r="3" />
-              </svg>
+              <MapPinIcon size={18} color="currentColor" />
               Location
             </h2>
           <FormField label="City">
@@ -385,18 +350,7 @@ export function ProfileForm({ user, onSave, onCancel, isLoading }: ProfileFormPr
                 gap: "10px",
               }}
             >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
+              <BriefcaseIcon size={18} color="currentColor" />
               Professional
             </h2>
           <FormField label="Company">

@@ -9,6 +9,15 @@ import { FlyerCard } from "@/components/flyers/FlyerCard";
 import { userApi, type UserProfileRead } from "@/lib/api/user";
 import { flyersApi, type FlyerRead } from "@/lib/api/flyers";
 import { tokens } from "@/components/theme/tokens";
+import {
+  LoaderIcon,
+  ZapIcon,
+  PlusIcon,
+  ImageIcon,
+  ProfileIcon,
+  UsersIcon,
+  TrendingUpIcon,
+} from "@/components/icons";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -79,29 +88,12 @@ export default function DashboardPage() {
             display: "flex",
             alignItems: "center",
             gap: "12px",
-            color: tokens.textSecondary,
-            fontSize: "16px",
-          }}
-        >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 20 20"
-            fill="none"
-            style={{ animation: "spin 1s linear infinite" }}
-          >
-            <circle
-              cx="10"
-              cy="10"
-              r="7"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeDasharray="44"
-              strokeDashoffset="33"
-              strokeLinecap="round"
-            />
-          </svg>
-          Loading dashboard...
+          color: tokens.textSecondary,
+          fontSize: "16px",
+        }}
+      >
+        <LoaderIcon size={20} color="currentColor" />
+        Loading dashboard...
           <style jsx>{`
             @keyframes spin {
               from {
@@ -236,18 +228,7 @@ export default function DashboardPage() {
             gap: "10px",
           }}
         >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-          </svg>
+          <ZapIcon size={20} color="currentColor" />
           Quick Actions
         </h2>
         <div
@@ -266,19 +247,7 @@ export default function DashboardPage() {
             }}
           >
             <span style={{ display: "flex", alignItems: "center", gap: "10px", width: "100%" }}>
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
+              <PlusIcon size={20} color="currentColor" />
               <span>Create Flyer</span>
             </span>
           </Button>
@@ -292,20 +261,7 @@ export default function DashboardPage() {
             }}
           >
             <span style={{ display: "flex", alignItems: "center", gap: "10px", width: "100%" }}>
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                <circle cx="8.5" cy="8.5" r="1.5" />
-                <polyline points="21,15 16,10 5,21" />
-              </svg>
+              <ImageIcon size={20} color="currentColor" />
               <span>View All Flyers</span>
             </span>
           </Button>
@@ -319,19 +275,7 @@ export default function DashboardPage() {
             }}
           >
             <span style={{ display: "flex", alignItems: "center", gap: "10px", width: "100%" }}>
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
+              <ProfileIcon size={20} color="currentColor" />
               <span>Edit Profile</span>
             </span>
           </Button>
@@ -345,20 +289,7 @@ export default function DashboardPage() {
             }}
           >
             <span style={{ display: "flex", alignItems: "center", gap: "10px", width: "100%" }}>
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                <circle cx="9" cy="7" r="4" />
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
-              </svg>
+              <UsersIcon size={20} color="currentColor" />
               <span>Theme</span>
             </span>
           </Button>
@@ -386,25 +317,13 @@ export default function DashboardPage() {
                 margin: 0,
                 letterSpacing: "-0.01em",
                 display: "flex",
-                alignItems: "center",
-                gap: "10px",
-              }}
-            >
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <polyline points="23,6 13.5,15.5 8.5,10.5 1,18" />
-                <polyline points="17,6 23,6 23,12" />
-              </svg>
-              Recent Flyers
-            </h2>
+              alignItems: "center",
+              gap: "10px",
+            }}
+          >
+            <TrendingUpIcon size={24} color="currentColor" />
+            Recent Flyers
+          </h2>
             <Button variant="secondary" onClick={() => router.push("/flyers")}>
               View All
             </Button>
@@ -443,22 +362,9 @@ export default function DashboardPage() {
               justifyContent: "center",
               border: `2px solid ${tokens.border}`,
             }}
-          >
-            <svg
-              width="40"
-              height="40"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke={tokens.textMuted}
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
             >
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-              <circle cx="8.5" cy="8.5" r="1.5" />
-              <polyline points="21,15 16,10 5,21" />
-            </svg>
-          </div>
+              <ImageIcon size={40} color={tokens.textMuted} />
+            </div>
           <h3
             style={{
               fontSize: "20px",
@@ -480,19 +386,7 @@ export default function DashboardPage() {
           </p>
           <Button onClick={() => router.push("/flyers/create")}>
             <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
+              <PlusIcon size={18} color="currentColor" />
               Create Your First Flyer
             </span>
           </Button>

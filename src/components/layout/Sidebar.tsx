@@ -4,18 +4,34 @@ import type { MouseEventHandler } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { tokens } from "@/components/theme/tokens";
+import {
+  DashboardIcon,
+  FlyersIcon,
+  ProfileIcon,
+  ThemeIcon,
+  MenuIcon,
+  ChevronLeftIcon,
+  type IconProps,
+} from "@/components/icons";
 
 export type SidebarProps = {
   collapsed: boolean;
   onToggle: MouseEventHandler<HTMLButtonElement>;
 };
 
-const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" },
-  { href: "/flyers", label: "Flyers", icon: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" },
-  { href: "/theme", label: "Theme", icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" },
-  { href: "/profile", label: "Profile", icon: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" },
+type NavItemIcon = React.ComponentType<IconProps>;
+
+const navItems: Array<{ href: string; label: string; Icon: NavItemIcon }> = [
+  { href: "/dashboard", label: "Dashboard", Icon: DashboardIcon },
+  { href: "/flyers", label: "Flyers", Icon: FlyersIcon },
+  { href: "/profile", label: "Profile", Icon: ProfileIcon },
 ];
+
+const themeItem = {
+  href: "/theme",
+  label: "Theme",
+  Icon: ThemeIcon,
+};
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   return (
@@ -69,22 +85,11 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             e.currentTarget.style.color = tokens.textSecondary;
           }}
         >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 20 20"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            {collapsed ? (
-              <path d="M4 6h12M4 12h12M4 18h12" />
-            ) : (
-              <path d="M6 18L14 10L6 2" />
-            )}
-          </svg>
+          {collapsed ? (
+            <MenuIcon size={20} color="currentColor" />
+          ) : (
+            <ChevronLeftIcon size={20} color="currentColor" />
+          )}
         </button>
         {!collapsed && (
           <span
@@ -118,10 +123,18 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             key={item.href}
             href={item.href}
             label={item.label}
-            icon={item.icon}
+            Icon={item.Icon}
             collapsed={collapsed}
           />
         ))}
+        <div style={{ marginTop: "auto", paddingTop: "4px" }}>
+          <SidebarItem
+            href={themeItem.href}
+            label={themeItem.label}
+            Icon={themeItem.Icon}
+            collapsed={collapsed}
+          />
+        </div>
       </nav>
     </aside>
   );
@@ -130,11 +143,11 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 type SidebarItemProps = {
   href: string;
   label: string;
-  icon: string;
+  Icon: NavItemIcon;
   collapsed: boolean;
 };
 
-function SidebarItem({ href, label, icon, collapsed }: SidebarItemProps) {
+function SidebarItem({ href, label, Icon, collapsed }: SidebarItemProps) {
   const pathname = usePathname();
   const isActive = pathname === href || (href !== "/dashboard" && pathname?.startsWith(href));
 
@@ -171,19 +184,7 @@ function SidebarItem({ href, label, icon, collapsed }: SidebarItemProps) {
       }}
       title={collapsed ? label : undefined}
     >
-      <svg
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        style={{ flexShrink: 0 }}
-      >
-        <path d={icon} />
-      </svg>
+      <Icon size={20} color="currentColor" style={{ flexShrink: 0 }} />
       {!collapsed && (
         <span
           style={{

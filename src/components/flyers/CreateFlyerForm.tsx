@@ -3,8 +3,6 @@
 import React, { useState, FormEvent, ChangeEvent } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { Textarea } from "@/components/ui/Textarea";
 import { tokens } from "@/components/theme/tokens";
 
 type CreateFlyerFormProps = {
@@ -14,8 +12,6 @@ type CreateFlyerFormProps = {
 };
 
 export function CreateFlyerForm({ onSubmit, onCancel, isLoading }: CreateFlyerFormProps) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -43,22 +39,13 @@ export function CreateFlyerForm({ onSubmit, onCancel, isLoading }: CreateFlyerFo
     e.preventDefault();
     setError(null);
 
-    if (!title.trim()) {
-      setError("Title is required");
-      return;
-    }
-
     if (!image) {
       setError("Please select an image");
       return;
     }
 
     const formData = new FormData();
-    formData.append("title", title);
     formData.append("image", image);
-    if (description.trim()) {
-      formData.append("description", description);
-    }
 
     await onSubmit(formData);
   }
@@ -107,70 +94,8 @@ export function CreateFlyerForm({ onSubmit, onCancel, isLoading }: CreateFlyerFo
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} noValidate>
       <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-        {/* Basic Information */}
-        <Card
-          style={{
-            backgroundColor: tokens.bgElevated,
-            border: `1px solid ${tokens.border}`,
-            borderRadius: "16px",
-            padding: "32px",
-          }}
-        >
-          <h2
-            style={{
-              fontSize: "18px",
-              fontWeight: 600,
-              color: tokens.textPrimary,
-              marginBottom: "24px",
-              letterSpacing: "-0.01em",
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-            }}
-          >
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <polyline points="14,2 14,8 20,8" />
-              <line x1="16" y1="13" x2="8" y2="13" />
-              <line x1="16" y1="17" x2="8" y2="17" />
-              <polyline points="10,9 9,9 8,9" />
-            </svg>
-            Flyer Details
-          </h2>
-          <FormField label="Title" required>
-            <Input
-              id="title"
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Enter flyer title"
-              required
-              disabled={isLoading}
-            />
-          </FormField>
-          <FormField label="Description" hint="Optional description for your flyer">
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Enter flyer description (optional)"
-              rows={4}
-              disabled={isLoading}
-            />
-          </FormField>
-        </Card>
-
         {/* Image Upload */}
         <Card
           style={{
@@ -232,7 +157,6 @@ export function CreateFlyerForm({ onSubmit, onCancel, isLoading }: CreateFlyerFo
                 type="file"
                 accept="image/*"
                 onChange={handleImageChange}
-                required
                 disabled={isLoading}
                 style={{
                   width: "100%",
@@ -245,6 +169,58 @@ export function CreateFlyerForm({ onSubmit, onCancel, isLoading }: CreateFlyerFo
                   fontSize: "14px",
                 }}
               />
+              {image && (
+                <div
+                  style={{
+                    marginTop: "12px",
+                    padding: "12px",
+                    backgroundColor: tokens.bgElevated,
+                    border: `1px solid ${tokens.accent}40`,
+                    borderRadius: "8px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                  }}
+                >
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{ flexShrink: 0, color: tokens.accent }}
+                  >
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14,2 14,8 20,8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
+                    <polyline points="10,9 9,9 8,9" />
+                  </svg>
+                  <span
+                    style={{
+                      fontSize: "14px",
+                      color: tokens.textPrimary,
+                      flex: 1,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {image.name}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: "12px",
+                      color: tokens.textMuted,
+                    }}
+                  >
+                    {(image.size / 1024 / 1024).toFixed(2)} MB
+                  </span>
+                </div>
+              )}
               {imagePreview && (
                 <div
                   style={{
