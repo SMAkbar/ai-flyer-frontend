@@ -1,5 +1,8 @@
 "use client";
 
+import { useState } from "react";
+import { tokens } from "@/components/theme/tokens";
+
 type AvatarPreviewProps = {
   avatarUrl: string | null;
   name?: string | null;
@@ -7,6 +10,8 @@ type AvatarPreviewProps = {
 };
 
 export function AvatarPreview({ avatarUrl, name, size = 80 }: AvatarPreviewProps) {
+  const [imageError, setImageError] = useState(false);
+
   const initials = name
     ?.split(" ")
     .map((n) => n[0])
@@ -14,36 +19,41 @@ export function AvatarPreview({ avatarUrl, name, size = 80 }: AvatarPreviewProps
     .toUpperCase()
     .slice(0, 2) || "?";
 
-  if (avatarUrl) {
+  if (avatarUrl && !imageError) {
     return (
-      <img
-        src={avatarUrl}
-        alt={name || "Avatar"}
-        style={{
-          width: size,
-          height: size,
-          borderRadius: "50%",
-          objectFit: "cover",
-        }}
-        onError={(e) => {
-          // Fallback to initials if image fails to load
-          const target = e.currentTarget;
-          target.style.display = "none";
-          if (target.nextElementSibling) {
-            (target.nextElementSibling as HTMLElement).style.display = "flex";
-          }
-        }}
-      />
+      <div style={{ position: "relative" }}>
+        <img
+          src={avatarUrl}
+          alt={name || "Avatar"}
+          style={{
+            width: size,
+            height: size,
+            borderRadius: "50%",
+            objectFit: "cover",
+            border: `2px solid ${tokens.border}`,
+            boxShadow: `0 4px 12px rgba(0, 0, 0, 0.2)`,
+          }}
+          onError={() => setImageError(true)}
+        />
+      </div>
     );
   }
 
   return (
     <div
-      className="flex items-center justify-center bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold"
       style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
         width: size,
         height: size,
         borderRadius: "50%",
+        backgroundColor: tokens.bgHover,
+        border: `2px solid ${tokens.border}`,
+        color: tokens.textPrimary,
+        fontSize: size * 0.4,
+        fontWeight: 600,
+        boxShadow: `0 4px 12px rgba(0, 0, 0, 0.2)`,
       }}
     >
       {initials}

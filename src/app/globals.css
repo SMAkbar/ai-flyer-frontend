@@ -31,12 +31,14 @@ body {
   box-sizing: border-box;
 }
 
-input::placeholder {
+input::placeholder,
+textarea::placeholder {
   color: var(--text-muted);
   opacity: 1;
 }
 
-input:disabled {
+input:disabled,
+textarea:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }

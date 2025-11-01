@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CreateFlyerForm } from "@/components/flyers/CreateFlyerForm";
 import { flyersApi } from "@/lib/api/flyers";
+import { tokens } from "@/components/theme/tokens";
 
 export default function CreateFlyerPage() {
   const router = useRouter();
@@ -22,7 +23,7 @@ export default function CreateFlyerPage() {
       if (result.ok) {
         setSuccessMessage("Flyer created successfully!");
         setTimeout(() => {
-          router.push("/dashboard");
+          router.push("/flyers");
         }, 1500);
       } else {
         setError(result.error.message || "Failed to create flyer");
@@ -39,19 +40,94 @@ export default function CreateFlyerPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold">Create Flyer</h1>
+    <div
+      style={{
+        width: "90%",
+        maxWidth: "900px",
+        margin: "0 auto",
+      }}
+    >
+      <div style={{ marginBottom: "32px" }}>
+        <h1
+          style={{
+            fontSize: "32px",
+            fontWeight: 700,
+            color: tokens.textPrimary,
+            marginBottom: "8px",
+            letterSpacing: "-0.02em",
+          }}
+        >
+          Create Flyer
+        </h1>
+        <p
+          style={{
+            fontSize: "15px",
+            color: tokens.textSecondary,
+            margin: 0,
+          }}
+        >
+          Upload an image and we'll automatically extract event information from your flyer
+        </p>
       </div>
 
       {error && (
-        <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md text-red-800 dark:text-red-200">
+        <div
+          style={{
+            marginBottom: "24px",
+            padding: "16px",
+            backgroundColor: `${tokens.danger}15`,
+            border: `1px solid ${tokens.danger}40`,
+            borderRadius: "12px",
+            color: tokens.danger,
+            fontSize: "14px",
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+          }}
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 20 20"
+            fill="none"
+            style={{ flexShrink: 0 }}
+          >
+            <path
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+              fill="currentColor"
+            />
+          </svg>
           {error}
         </div>
       )}
 
       {successMessage && (
-        <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md text-green-800 dark:text-green-200">
+        <div
+          style={{
+            marginBottom: "24px",
+            padding: "16px",
+            backgroundColor: `${tokens.success}15`,
+            border: `1px solid ${tokens.success}40`,
+            borderRadius: "12px",
+            color: tokens.success,
+            fontSize: "14px",
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+          }}
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 20 20"
+            fill="none"
+            style={{ flexShrink: 0 }}
+          >
+            <path
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293l-3 3a1 1 0 01-1.414 0l-1.5-1.5a1 1 0 011.414-1.414L10 9.586l2.793-2.793a1 1 0 011.414 1.414z"
+              fill="currentColor"
+            />
+          </svg>
           {successMessage}
         </div>
       )}
