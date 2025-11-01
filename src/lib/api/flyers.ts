@@ -27,8 +27,23 @@ export type FlyerInformationExtraction = {
   updated_at: string;
 };
 
+export type GeneratedImageType = "time_date" | "performers" | "location";
+
+export type FlyerGeneratedImage = {
+  id: number;
+  flyer_id: number;
+  image_type: GeneratedImageType;
+  cloudfront_url: string;
+  instagram_post_content: string | null;
+  instagram_posted_at: string | null;
+  instagram_scheduled_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type FlyerDetailRead = FlyerRead & {
   information_extraction: FlyerInformationExtraction | null;
+  generated_images?: FlyerGeneratedImage[] | null;
 };
 
 export type FlyerInformationExtractionUpdate = {

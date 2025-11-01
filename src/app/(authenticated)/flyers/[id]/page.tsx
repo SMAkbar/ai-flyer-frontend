@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { flyersApi, type FlyerDetailRead } from "@/lib/api/flyers";
 import { tokens } from "@/components/theme/tokens";
 import { ArrowLeftIcon, CubeIcon, CheckIcon } from "@/components/icons";
+import { GeneratedImagesSection } from "@/components/flyers/GeneratedImagesSection";
 
 export default function FlyerDetailPage() {
   const router = useRouter();
@@ -818,6 +819,17 @@ export default function FlyerDetailPage() {
             </Card>
           )}
         </div>
+      </div>
+
+      {/* Generated Images Section */}
+      <div style={{ marginTop: "24px" }}>
+        <GeneratedImagesSection
+          images={flyer.generated_images}
+          isLoading={
+            extraction?.status === "completed" &&
+            (!flyer.generated_images || flyer.generated_images.length === 0)
+          }
+        />
       </div>
     </div>
   );
