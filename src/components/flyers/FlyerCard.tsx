@@ -49,7 +49,7 @@ export function FlyerCard({ flyer }: FlyerCardProps) {
         style={{
           position: "relative",
           width: "100%",
-          aspectRatio: "16/9",
+          aspectRatio: "3/4",
           overflow: "hidden",
           backgroundColor: tokens.bgHover,
         }}
@@ -62,7 +62,7 @@ export function FlyerCard({ flyer }: FlyerCardProps) {
             style={{
               width: "100%",
               height: "100%",
-              objectFit: "cover",
+              objectFit: "contain",
               transition: "transform 0.3s ease",
               transform: isHovered ? "scale(1.05)" : "scale(1)",
             }}
