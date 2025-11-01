@@ -31,10 +31,20 @@ export type FlyerDetailRead = FlyerRead & {
   information_extraction: FlyerInformationExtraction | null;
 };
 
+export type FlyerInformationExtractionUpdate = {
+  event_date_time?: string | null;
+  location_town_city?: string | null;
+  event_title?: string | null;
+  performers_djs_soundsystems?: string | null;
+  venue_name?: string | null;
+};
+
 export const flyersApi = {
   getAll: () => apiClient.get<FlyerRead[]>("/flyers/"),
   getById: (id: number) => apiClient.get<FlyerDetailRead>(`/flyers/${id}`),
   create: (formData: FormData) => apiClient.postForm<FlyerRead>("/flyers/", formData),
   getExtraction: (id: number) => apiClient.get<FlyerInformationExtraction>(`/flyers/${id}/extraction`),
+  updateExtraction: (id: number, data: FlyerInformationExtractionUpdate) =>
+    apiClient.patch<FlyerInformationExtraction>(`/flyers/${id}/extraction`, data),
 };
 

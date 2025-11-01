@@ -16,6 +16,9 @@ export default function FlyerDetailPage() {
   const [flyer, setFlyer] = useState<FlyerDetailRead | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [editingValue, setEditingValue] = useState<string>("");
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
     if (flyerId) {
@@ -53,6 +56,57 @@ export default function FlyerDetailPage() {
       hour: "2-digit",
       minute: "2-digit",
     });
+  };
+
+  const handleFieldEdit = (fieldName: string, currentValue: string | null) => {
+    setEditingField(fieldName);
+    setEditingValue(currentValue || "");
+  };
+
+  const handleFieldSave = async (fieldName: string) => {
+    if (!flyerId || !flyer?.information_extraction) return;
+
+    setIsUpdating(true);
+    try {
+      const updateData: Record<string, string | null> = {};
+      updateData[fieldName] = editingValue.trim() || null;
+
+      const result = await flyersApi.updateExtraction(flyerId, updateData);
+
+      if (result.ok) {
+        setFlyer((prev) => {
+          if (!prev || !prev.information_extraction) return prev;
+          return {
+            ...prev,
+            information_extraction: {
+              ...prev.information_extraction,
+              ...result.data,
+            },
+          };
+        });
+        setEditingField(null);
+        setEditingValue("");
+      } else {
+        setError(result.error.message || "Failed to update field");
+      }
+    } catch (err) {
+      setError("An unexpected error occurred");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleFieldCancel = () => {
+    setEditingField(null);
+    setEditingValue("");
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent, fieldName: string) => {
+    if (e.key === "Enter") {
+      handleFieldSave(fieldName);
+    } else if (e.key === "Escape") {
+      handleFieldCancel();
+    }
   };
 
   if (isLoading) {
@@ -335,83 +389,170 @@ export default function FlyerDetailPage() {
 
               {extraction.status === "completed" ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-                  {extraction.event_date_time && (
-                    <div>
-                      <div
+                  <div>
+                    <div
+                      style={{
+                        fontSize: "12px",
+                        fontWeight: 500,
+                        color: tokens.textMuted,
+                        marginBottom: "6px",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                      }}
+                    >
+                      Event Date/Time
+                    </div>
+                    {editingField === "event_date_time" ? (
+                      <input
+                        type="text"
+                        value={editingValue}
+                        onChange={(e) => setEditingValue(e.target.value)}
+                        onBlur={() => handleFieldSave("event_date_time")}
+                        onKeyDown={(e) => handleKeyDown(e, "event_date_time")}
+                        disabled={isUpdating}
+                        autoFocus
                         style={{
-                          fontSize: "12px",
+                          width: "100%",
+                          fontSize: "16px",
+                          color: tokens.textPrimary,
                           fontWeight: 500,
-                          color: tokens.textMuted,
-                          marginBottom: "6px",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.05em",
+                          padding: "8px 12px",
+                          backgroundColor: tokens.bgElevated,
+                          border: `1px solid ${tokens.border}`,
+                          borderRadius: "8px",
+                          outline: "none",
+                          fontFamily: "inherit",
                         }}
-                      >
-                        Event Date/Time
-                      </div>
+                      />
+                    ) : (
                       <div
+                        onClick={() => handleFieldEdit("event_date_time", extraction.event_date_time)}
                         style={{
                           fontSize: "16px",
                           color: tokens.textPrimary,
                           fontWeight: 500,
+                          padding: "8px 12px",
+                          backgroundColor: tokens.bgElevated,
+                          border: `1px solid ${tokens.border}`,
+                          borderRadius: "8px",
+                          cursor: "text",
+                          minHeight: "24px",
                         }}
                       >
-                        {extraction.event_date_time}
+                        {extraction.event_date_time || "Click to edit"}
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
 
-                  {extraction.location_town_city && (
-                    <div>
-                      <div
+                  <div>
+                    <div
+                      style={{
+                        fontSize: "12px",
+                        fontWeight: 500,
+                        color: tokens.textMuted,
+                        marginBottom: "6px",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                      }}
+                    >
+                      Location
+                    </div>
+                    {editingField === "location_town_city" ? (
+                      <input
+                        type="text"
+                        value={editingValue}
+                        onChange={(e) => setEditingValue(e.target.value)}
+                        onBlur={() => handleFieldSave("location_town_city")}
+                        onKeyDown={(e) => handleKeyDown(e, "location_town_city")}
+                        disabled={isUpdating}
+                        autoFocus
                         style={{
-                          fontSize: "12px",
+                          width: "100%",
+                          fontSize: "16px",
+                          color: tokens.textPrimary,
                           fontWeight: 500,
-                          color: tokens.textMuted,
-                          marginBottom: "6px",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.05em",
+                          padding: "8px 12px",
+                          backgroundColor: tokens.bgElevated,
+                          border: `1px solid ${tokens.border}`,
+                          borderRadius: "8px",
+                          outline: "none",
+                          fontFamily: "inherit",
                         }}
-                      >
-                        Location
-                      </div>
+                      />
+                    ) : (
                       <div
+                        onClick={() => handleFieldEdit("location_town_city", extraction.location_town_city)}
                         style={{
                           fontSize: "16px",
                           color: tokens.textPrimary,
                           fontWeight: 500,
+                          padding: "8px 12px",
+                          backgroundColor: tokens.bgElevated,
+                          border: `1px solid ${tokens.border}`,
+                          borderRadius: "8px",
+                          cursor: "text",
+                          minHeight: "24px",
                         }}
                       >
-                        {extraction.location_town_city}
+                        {extraction.location_town_city || "Click to edit"}
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
 
-                  {extraction.event_title && (
-                    <div>
-                      <div
+                  <div>
+                    <div
+                      style={{
+                        fontSize: "12px",
+                        fontWeight: 500,
+                        color: tokens.textMuted,
+                        marginBottom: "6px",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                      }}
+                    >
+                      Event Title
+                    </div>
+                    {editingField === "event_title" ? (
+                      <input
+                        type="text"
+                        value={editingValue}
+                        onChange={(e) => setEditingValue(e.target.value)}
+                        onBlur={() => handleFieldSave("event_title")}
+                        onKeyDown={(e) => handleKeyDown(e, "event_title")}
+                        disabled={isUpdating}
+                        autoFocus
                         style={{
-                          fontSize: "12px",
+                          width: "100%",
+                          fontSize: "16px",
+                          color: tokens.textPrimary,
                           fontWeight: 500,
-                          color: tokens.textMuted,
-                          marginBottom: "6px",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.05em",
+                          padding: "8px 12px",
+                          backgroundColor: tokens.bgElevated,
+                          border: `1px solid ${tokens.border}`,
+                          borderRadius: "8px",
+                          outline: "none",
+                          fontFamily: "inherit",
                         }}
-                      >
-                        Event Title
-                      </div>
+                      />
+                    ) : (
                       <div
+                        onClick={() => handleFieldEdit("event_title", extraction.event_title)}
                         style={{
                           fontSize: "16px",
                           color: tokens.textPrimary,
                           fontWeight: 500,
+                          padding: "8px 12px",
+                          backgroundColor: tokens.bgElevated,
+                          border: `1px solid ${tokens.border}`,
+                          borderRadius: "8px",
+                          cursor: "text",
+                          minHeight: "24px",
                         }}
                       >
-                        {extraction.event_title}
+                        {extraction.event_title || "Click to edit"}
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
 
                   {extraction.venue_name && (
                     <div>
@@ -439,31 +580,60 @@ export default function FlyerDetailPage() {
                     </div>
                   )}
 
-                  {extraction.performers_djs_soundsystems && (
-                    <div>
-                      <div
+                  <div>
+                    <div
+                      style={{
+                        fontSize: "12px",
+                        fontWeight: 500,
+                        color: tokens.textMuted,
+                        marginBottom: "6px",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                      }}
+                    >
+                      Performers/DJs/Soundsystems
+                    </div>
+                    {editingField === "performers_djs_soundsystems" ? (
+                      <input
+                        type="text"
+                        value={editingValue}
+                        onChange={(e) => setEditingValue(e.target.value)}
+                        onBlur={() => handleFieldSave("performers_djs_soundsystems")}
+                        onKeyDown={(e) => handleKeyDown(e, "performers_djs_soundsystems")}
+                        disabled={isUpdating}
+                        autoFocus
                         style={{
-                          fontSize: "12px",
+                          width: "100%",
+                          fontSize: "16px",
+                          color: tokens.textPrimary,
                           fontWeight: 500,
-                          color: tokens.textMuted,
-                          marginBottom: "6px",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.05em",
+                          padding: "8px 12px",
+                          backgroundColor: tokens.bgElevated,
+                          border: `1px solid ${tokens.border}`,
+                          borderRadius: "8px",
+                          outline: "none",
+                          fontFamily: "inherit",
                         }}
-                      >
-                        Performers/DJs/Soundsystems
-                      </div>
+                      />
+                    ) : (
                       <div
+                        onClick={() => handleFieldEdit("performers_djs_soundsystems", extraction.performers_djs_soundsystems)}
                         style={{
                           fontSize: "16px",
                           color: tokens.textPrimary,
                           fontWeight: 500,
+                          padding: "8px 12px",
+                          backgroundColor: tokens.bgElevated,
+                          border: `1px solid ${tokens.border}`,
+                          borderRadius: "8px",
+                          cursor: "text",
+                          minHeight: "24px",
                         }}
                       >
-                        {extraction.performers_djs_soundsystems}
+                        {extraction.performers_djs_soundsystems || "Click to edit"}
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
 
                   {extraction.confidence_level && (
                     <div>
