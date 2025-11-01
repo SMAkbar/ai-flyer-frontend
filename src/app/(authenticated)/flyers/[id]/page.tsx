@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { PageLayout } from "@/components/ui/PageLayout";
 import { Container } from "@/components/ui/Container";
 import { BackButton } from "@/components/ui/BackButton";
+import { Button } from "@/components/ui/Button";
 import { flyersApi, type FlyerDetailRead } from "@/lib/api/flyers";
 import { FlyerImageCard } from "@/components/flyers/FlyerImageCard";
 import { FlyerHeader } from "@/components/flyers/FlyerHeader";
@@ -13,6 +14,7 @@ import { GeneratedImagesSection } from "@/components/flyers/GeneratedImagesSecti
 
 export default function FlyerDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const flyerId = params?.id ? parseInt(params.id as string, 10) : null;
 
   const [flyer, setFlyer] = useState<FlyerDetailRead | null>(null);
@@ -159,6 +161,16 @@ export default function FlyerDetailPage() {
                     !flyer.generated_images || flyer.generated_images.length === 0
                   }
                 />
+                {flyer.generated_images && flyer.generated_images.length > 0 && (
+                  <div style={{ marginTop: "24px" }}>
+                    <Button
+                      onClick={() => router.push(`/flyers/${flyer.id}/instagram`)}
+                      variant="primary"
+                    >
+                      Schedule Instagram Posts
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </>

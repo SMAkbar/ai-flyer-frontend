@@ -35,6 +35,12 @@ export type FlyerGeneratedImage = {
   image_type: GeneratedImageType;
   cloudfront_url: string;
   instagram_post_content: string | null;
+  instagram_post_status?: "pending" | "scheduled" | "posting" | "posted" | "failed";
+  instagram_post_id?: string | null;
+  instagram_post_error?: string | null;
+  instagram_post_caption?: string | null;
+  instagram_post_hashtags?: string | null;
+  is_selected_for_posting?: boolean;
   instagram_posted_at: string | null;
   instagram_scheduled_at: string | null;
   created_at: string;
