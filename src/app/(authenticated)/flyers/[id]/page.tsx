@@ -168,16 +168,18 @@ export default function FlyerDetailPage() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 500px), 1fr))",
-          gap: "32px",
+          gridTemplateColumns: "350px 1fr",
+          gap: "12px",
           marginBottom: "32px",
+          alignItems: "start",
         }}
       >
         {/* Flyer Image */}
-        <div>
+        <div style={{ width: "350px", margin: 0, padding: 0 }}>
           <Card
             style={{
               padding: 0,
+              margin: 0,
               backgroundColor: tokens.bgElevated,
               border: `1px solid ${tokens.border}`,
               borderRadius: "20px",
@@ -188,7 +190,7 @@ export default function FlyerDetailPage() {
               style={{
                 position: "relative",
                 width: "100%",
-                aspectRatio: "16/9",
+                aspectRatio: "4/5",
                 overflow: "hidden",
                 backgroundColor: tokens.bgHover,
               }}
@@ -199,7 +201,7 @@ export default function FlyerDetailPage() {
                 style={{
                   width: "100%",
                   height: "100%",
-                  objectFit: "cover",
+                  objectFit: "contain",
                 }}
               />
             </div>
@@ -207,7 +209,7 @@ export default function FlyerDetailPage() {
         </div>
 
         {/* Flyer Details */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "24px", margin: 0, padding: 0, width: "100%", minWidth: 0 }}>
           <div>
             <h1
               style={{
