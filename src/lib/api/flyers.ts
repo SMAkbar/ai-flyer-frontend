@@ -20,7 +20,8 @@ export type FlyerInformationExtraction = {
   event_title: string | null;
   performers_djs_soundsystems: string | null;
   venue_name: string | null;
-  confidence_level: string | null;
+  confidence_level: string | null; // DEPRECATED: Use field_confidence_levels
+  field_confidence_levels: Record<string, string | null> | null; // Per-field confidence levels
   extracted_data_json: Record<string, unknown> | null;
   error_message: string | null;
   created_at: string;

@@ -16,7 +16,8 @@ export type ExtractionData = {
   event_title?: string | null;
   venue_name?: string | null;
   performers_djs_soundsystems?: string | null;
-  confidence_level?: string | null;
+  confidence_level?: string | null; // DEPRECATED: Use field_confidence_levels
+  field_confidence_levels?: Record<string, string | null> | null; // Per-field confidence levels
   error_message?: string | null;
 };
 
@@ -30,6 +31,115 @@ export type ExtractionCardProps = {
   onFieldSave: (fieldName: string) => void;
   onFieldCancel: () => void;
 };
+
+// Helper function to get confidence status for a field
+function getFieldConfidenceStatus(
+  fieldValue: string | null | undefined,
+  confidenceLevel: string | null | undefined
+): 'red' | 'yellow' | 'green' | 'none' {
+  // Red: No data or confidence < 50%
+  if (!fieldValue || fieldValue.trim() === '') {
+    return 'red';
+  }
+
+  // No confidence level provided - default to yellow (needs review)
+  if (!confidenceLevel) {
+    return 'yellow';
+  }
+
+  try {
+    const confidence = parseFloat(confidenceLevel);
+    // Normalize if percentage format (e.g., 85 instead of 0.85)
+    const normalized = confidence > 1.0 ? confidence / 100.0 : confidence;
+
+    // Red: confidence < 50%
+    if (normalized < 0.5) {
+      return 'red';
+    }
+    // Yellow: 50% <= confidence < 90%
+    if (normalized < 0.9) {
+      return 'yellow';
+    }
+    // Green: confidence >= 90%
+    return 'green';
+  } catch {
+    // Invalid confidence format - default to yellow
+    return 'yellow';
+  }
+}
+
+// Helper function to format confidence percentage
+function formatConfidence(confidenceLevel: string | null | undefined): string {
+  if (!confidenceLevel) return 'N/A';
+  try {
+    const confidence = parseFloat(confidenceLevel);
+    const normalized = confidence > 1.0 ? confidence / 100.0 : confidence;
+    return `${Math.round(normalized * 100)}%`;
+  } catch {
+    return 'N/A';
+  }
+}
+
+// Helper component for confidence badge
+function ConfidenceBadge({
+  status,
+  confidence,
+}: {
+  status: 'red' | 'yellow' | 'green' | 'none';
+  confidence: string | null | undefined;
+}) {
+  if (status === 'none') return null;
+
+  const colors = {
+    red: {
+      bg: `${tokens.danger}15`,
+      border: `${tokens.danger}40`,
+      text: tokens.danger,
+      icon: WarningIcon,
+      label: 'Needs Review',
+    },
+    yellow: {
+      bg: `${tokens.warning}15`,
+      border: `${tokens.warning}40`,
+      text: tokens.warning,
+      icon: WarningIcon,
+      label: 'Please Review',
+    },
+    green: {
+      bg: `${tokens.success}15`,
+      border: `${tokens.success}40`,
+      text: tokens.success,
+      icon: CheckIcon,
+      label: 'High Confidence',
+    },
+  };
+
+  const color = colors[status];
+  const Icon = color.icon;
+
+  return (
+    <div
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '6px',
+        padding: '6px 12px',
+        borderRadius: '6px',
+        backgroundColor: color.bg,
+        border: `1px solid ${color.border}`,
+        fontSize: '13px',
+        fontWeight: 500,
+        marginLeft: '8px',
+      }}
+      title={color.label}
+    >
+      <Icon size={14} color={color.text} />
+      <span style={{ color: color.text }}>
+        {confidence ? formatConfidence(confidence) : color.label}
+      </span>
+    </div>
+  );
+}
 
 export function ExtractionCard({
   extraction,
@@ -107,7 +217,16 @@ export function ExtractionCard({
       {extraction.status === 'completed' ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div>
-            <FieldLabel>Event Date/Time</FieldLabel>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <FieldLabel>Event Date/Time</FieldLabel>
+              <ConfidenceBadge
+                status={getFieldConfidenceStatus(
+                  extraction.event_date_time,
+                  extraction.field_confidence_levels?.event_date_time
+                )}
+                confidence={extraction.field_confidence_levels?.event_date_time}
+              />
+            </div>
             <EditableField
               value={extraction.event_date_time}
               isEditing={editingField === 'event_date_time'}
@@ -121,7 +240,16 @@ export function ExtractionCard({
           </div>
 
           <div>
-            <FieldLabel>Location</FieldLabel>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <FieldLabel>Location</FieldLabel>
+              <ConfidenceBadge
+                status={getFieldConfidenceStatus(
+                  extraction.location_town_city,
+                  extraction.field_confidence_levels?.location_town_city
+                )}
+                confidence={extraction.field_confidence_levels?.location_town_city}
+              />
+            </div>
             <EditableField
               value={extraction.location_town_city}
               isEditing={editingField === 'location_town_city'}
@@ -135,7 +263,16 @@ export function ExtractionCard({
           </div>
 
           <div>
-            <FieldLabel>Event Title</FieldLabel>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <FieldLabel>Event Title</FieldLabel>
+              <ConfidenceBadge
+                status={getFieldConfidenceStatus(
+                  extraction.event_title,
+                  extraction.field_confidence_levels?.event_title
+                )}
+                confidence={extraction.field_confidence_levels?.event_title}
+              />
+            </div>
             <EditableField
               value={extraction.event_title}
               isEditing={editingField === 'event_title'}
@@ -150,7 +287,18 @@ export function ExtractionCard({
 
           {extraction.venue_name && (
             <div>
-              <FieldLabel>Venue</FieldLabel>
+              <div
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}
+              >
+                <FieldLabel>Venue</FieldLabel>
+                <ConfidenceBadge
+                  status={getFieldConfidenceStatus(
+                    extraction.venue_name,
+                    extraction.field_confidence_levels?.venue_name
+                  )}
+                  confidence={extraction.field_confidence_levels?.venue_name}
+                />
+              </div>
               <div
                 style={{
                   fontSize: '16px',
@@ -168,7 +316,16 @@ export function ExtractionCard({
           )}
 
           <div>
-            <FieldLabel>Performers/DJs/Soundsystems</FieldLabel>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <FieldLabel>Performers/DJs/Soundsystems</FieldLabel>
+              <ConfidenceBadge
+                status={getFieldConfidenceStatus(
+                  extraction.performers_djs_soundsystems,
+                  extraction.field_confidence_levels?.performers_djs_soundsystems
+                )}
+                confidence={extraction.field_confidence_levels?.performers_djs_soundsystems}
+              />
+            </div>
             <EditableField
               value={extraction.performers_djs_soundsystems}
               isEditing={editingField === 'performers_djs_soundsystems'}
@@ -182,34 +339,6 @@ export function ExtractionCard({
               disabled={isUpdating}
             />
           </div>
-
-          {extraction.confidence_level && (
-            <div>
-              <FieldLabel>Confidence Level</FieldLabel>
-              <div
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '8px 14px',
-                  borderRadius: '8px',
-                  backgroundColor: `${tokens.success}15`,
-                  border: `1px solid ${tokens.success}40`,
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: '18px',
-                    fontWeight: 700,
-                    color: tokens.success,
-                  }}
-                >
-                  {Math.round(parseFloat(extraction.confidence_level) * 100)}%
-                </div>
-                <CheckIcon size={16} color={tokens.success} />
-              </div>
-            </div>
-          )}
         </div>
       ) : extraction.status === 'processing' ? (
         <div
