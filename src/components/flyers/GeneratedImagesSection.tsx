@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 import { GeneratedImageCard } from "@/components/flyers/GeneratedImageCard";
 import { tokens } from "@/components/theme/tokens";
 import { ImageIcon } from "@/components/icons";
@@ -10,14 +11,16 @@ import type { FlyerGeneratedImage } from "@/lib/api/flyers";
 type GeneratedImagesSectionProps = {
   images: FlyerGeneratedImage[] | null | undefined;
   isLoading?: boolean;
+  isGenerating?: boolean;
 };
 
 export function GeneratedImagesSection({
   images,
   isLoading = false,
+  isGenerating = false,
 }: GeneratedImagesSectionProps) {
-  // Loading state
-  if (isLoading) {
+  // Loading state - only show when actively generating (not just when no images exist)
+  if (isLoading && isGenerating) {
     return (
       <Card
         style={{
@@ -148,10 +151,11 @@ export function GeneratedImagesSection({
               fontSize: "14px",
               color: tokens.textSecondary,
               maxWidth: "400px",
-              margin: "0 auto",
+              marginLeft: "auto",
+              marginRight: "auto",
             }}
           >
-            Images will be automatically generated when extraction confidence is above 90%
+            Promotional images haven't been generated yet. Use the button above to generate them manually.
           </p>
         </div>
       </Card>

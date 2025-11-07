@@ -1,6 +1,7 @@
 "use client";
 
 import type { MouseEventHandler } from "react";
+import Image from "next/image";
 import { UserMenu } from "./UserMenu";
 import { tokens } from "@/components/theme/tokens";
 import { MenuIcon } from "@/components/icons";
@@ -64,13 +65,57 @@ export function Header({ onToggleSidebar, userEmail }: HeaderProps) {
         </button>
         <div
           style={{
-            fontSize: "18px",
-            fontWeight: 700,
-            color: tokens.textPrimary,
-            letterSpacing: "-0.02em",
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
           }}
         >
-          AI Flyer
+          <div
+            style={{
+              position: "relative",
+              width: "36px",
+              height: "36px",
+              flexShrink: 0,
+            }}
+          >
+            <Image
+              src="/dub-events-logo.png"
+              alt="Dub Events UK"
+              fill
+              style={{ objectFit: "contain" }}
+              priority
+            />
+          </div>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "2px",
+            }}
+          >
+            <div
+              style={{
+                fontSize: "16px",
+                fontWeight: 700,
+                color: tokens.textPrimary,
+                letterSpacing: "-0.02em",
+                lineHeight: 1.2,
+              }}
+            >
+              Dub Events Dashboard
+            </div>
+            <div
+              style={{
+                fontSize: "11px",
+                fontWeight: 400,
+                color: tokens.textSecondary,
+                letterSpacing: "0.01em",
+                lineHeight: 1.2,
+              }}
+            >
+              Event Management & Automation
+            </div>
+          </div>
         </div>
         <div
           style={{

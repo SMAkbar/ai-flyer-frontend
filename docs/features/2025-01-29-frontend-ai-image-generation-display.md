@@ -7,7 +7,7 @@ Slug: frontend-ai-image-generation
 
 ## Summary and background
 
-When flyer information extraction completes with confidence > 90%, the backend automatically generates three promotional images (time/date, performers, location). The frontend needs to display these generated images in the flyer detail page, allowing users to view, download, and potentially use them for Instagram posting.
+When flyer information extraction completes with **all extracted fields having individual confidence levels above 90%**, the backend automatically generates three promotional images (time/date, performers, location). The frontend needs to display these generated images in the flyer detail page, allowing users to view, download, and potentially use them for Instagram posting.
 
 This feature builds on:
 - Backend AI image generation feature (automatic generation when confidence > 90%)
@@ -91,7 +91,7 @@ The generated images section will be added below the extracted information card 
 
 When no images are generated yet (or generation in progress):
 - Show message: "No promotional images generated yet"
-- Subtext: "Images will be automatically generated when extraction confidence is above 90%"
+- Subtext: "Images will be automatically generated when all extracted fields have confidence above 90%"
 - Show loading indicator if extraction is in progress
 
 ### Loading State
@@ -279,4 +279,8 @@ frontend/src/
 - 2025-01-29 — Added — GeneratedImageCard component created with download functionality
 - 2025-01-29 — Added — GeneratedImagesSection component created with loading and empty states
 - 2025-01-29 — Added — Generated images section integrated into flyer detail page
+- 2025-11-03 — Changed — Updated image generation trigger description:
+  - Images are now generated when ALL extracted fields with data have individual confidence > 90%
+  - Uses per-field confidence levels instead of overall confidence level
+  - Fields without data are skipped in the confidence check
 

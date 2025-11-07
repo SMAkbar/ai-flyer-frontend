@@ -6,6 +6,7 @@ import { FieldLabel } from '@/components/ui/FieldLabel';
 import { EditableField } from '@/components/ui/EditableField';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Alert } from '@/components/ui/Alert';
+import { Button } from '@/components/ui/Button';
 import { tokens } from '@/components/theme/tokens';
 import { CubeIcon, CheckIcon, WarningIcon, ClockIcon } from '@/components/icons';
 
@@ -30,6 +31,9 @@ export type ExtractionCardProps = {
   onFieldChange: (value: string) => void;
   onFieldSave: (fieldName: string) => void;
   onFieldCancel: () => void;
+  onGenerateImages?: () => void;
+  isGeneratingImages?: boolean;
+  hasGeneratedImages?: boolean;
 };
 
 // Helper function to get confidence status for a field
@@ -150,6 +154,9 @@ export function ExtractionCard({
   onFieldChange,
   onFieldSave,
   onFieldCancel,
+  onGenerateImages,
+  isGeneratingImages = false,
+  hasGeneratedImages = false,
 }: ExtractionCardProps) {
   if (!extraction) {
     return (
@@ -339,6 +346,23 @@ export function ExtractionCard({
               disabled={isUpdating}
             />
           </div>
+
+          {extraction.status === 'completed' && onGenerateImages && (
+            <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: `1px solid ${tokens.border}` }}>
+              <Button
+                onClick={onGenerateImages}
+                variant="primary"
+                disabled={isGeneratingImages || isUpdating}
+                style={{ width: '100%' }}
+              >
+                {isGeneratingImages
+                  ? 'Generating Images...'
+                  : hasGeneratedImages
+                  ? 'Regenerate Promotional Images'
+                  : 'Generate Promotional Images'}
+              </Button>
+            </div>
+          )}
         </div>
       ) : extraction.status === 'processing' ? (
         <div

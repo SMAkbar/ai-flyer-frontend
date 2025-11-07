@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { authApi } from "@/lib/api/auth";
 import { Button } from "@/components/ui/Button";
@@ -54,22 +55,54 @@ export default function LoginPage() {
         }}
       >
         <div style={{ marginBottom: "32px", textAlign: "center" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              marginBottom: "24px",
+            }}
+          >
+            <div
+              style={{
+                position: "relative",
+                width: "80px",
+                height: "80px",
+              }}
+            >
+              <Image
+                src="/dub-events-logo.png"
+                alt="Dub Events UK"
+                fill
+                style={{ objectFit: "contain" }}
+                priority
+              />
+            </div>
+          </div>
           <h1
             style={{
-              fontSize: "32px",
+              fontSize: "28px",
               fontWeight: 700,
               marginBottom: "8px",
               color: tokens.textPrimary,
               letterSpacing: "-0.02em",
             }}
           >
-            Welcome back
+            Dub Events Dashboard
           </h1>
           <p
             style={{
               fontSize: "15px",
               color: tokens.textSecondary,
-              margin: 0,
+              margin: "0 0 4px 0",
+            }}
+          >
+            Event Management & Instagram Automation
+          </p>
+          <p
+            style={{
+              fontSize: "14px",
+              color: tokens.textMuted,
+              margin: "16px 0 0 0",
             }}
           >
             Sign in to your account to continue

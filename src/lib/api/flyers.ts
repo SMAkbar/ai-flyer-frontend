@@ -68,5 +68,7 @@ export const flyersApi = {
   getExtraction: (id: number) => apiClient.get<FlyerInformationExtraction>(`/flyers/${id}/extraction`),
   updateExtraction: (id: number, data: FlyerInformationExtractionUpdate) =>
     apiClient.patch<FlyerInformationExtraction>(`/flyers/${id}/extraction`, data),
+  generateImages: (id: number) =>
+    apiClient.post<{ message: string }>(`/flyers/${id}/generate-images`, {}),
 };
 

@@ -1,6 +1,7 @@
 "use client";
 
 import type { MouseEventHandler } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { tokens } from "@/components/theme/tokens";
@@ -53,58 +54,162 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           height: "56px",
           display: "flex",
           alignItems: "center",
-          gap: "12px",
-          padding: "0 16px",
+          gap: collapsed ? "0" : "12px",
+          padding: collapsed ? "0 8px" : "0 16px",
           borderBottom: `1px solid ${tokens.border}`,
+          justifyContent: collapsed ? "center" : "flex-start",
         }}
       >
-        <button
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          onClick={onToggle}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: "36px",
-            height: "36px",
-            borderRadius: "8px",
-            border: `1px solid ${tokens.border}`,
-            backgroundColor: "transparent",
-            color: tokens.textSecondary,
-            cursor: "pointer",
-            transition: "all 0.2s ease",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = tokens.bgHover;
-            e.currentTarget.style.borderColor = tokens.accent;
-            e.currentTarget.style.color = tokens.textPrimary;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = "transparent";
-            e.currentTarget.style.borderColor = tokens.border;
-            e.currentTarget.style.color = tokens.textSecondary;
-          }}
-        >
-          {collapsed ? (
-            <MenuIcon size={20} color="currentColor" />
-          ) : (
-            <ChevronLeftIcon size={20} color="currentColor" />
-          )}
-        </button>
         {!collapsed && (
-          <span
+          <button
+            aria-label="Collapse sidebar"
+            onClick={onToggle}
             style={{
-              fontSize: "16px",
-              fontWeight: 600,
-              color: tokens.textPrimary,
-              letterSpacing: "-0.01em",
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "36px",
+              height: "36px",
+              borderRadius: "8px",
+              border: `1px solid ${tokens.border}`,
+              backgroundColor: "transparent",
+              color: tokens.textSecondary,
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+              flexShrink: 0,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = tokens.bgHover;
+              e.currentTarget.style.borderColor = tokens.accent;
+              e.currentTarget.style.color = tokens.textPrimary;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+              e.currentTarget.style.borderColor = tokens.border;
+              e.currentTarget.style.color = tokens.textSecondary;
             }}
           >
-            Navigation
-          </span>
+            <ChevronLeftIcon size={20} color="currentColor" />
+          </button>
+        )}
+        {collapsed ? (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "8px",
+              width: "100%",
+            }}
+          >
+            <button
+              aria-label="Expand sidebar"
+              onClick={onToggle}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "36px",
+                height: "36px",
+                borderRadius: "8px",
+                border: `1px solid ${tokens.border}`,
+                backgroundColor: "transparent",
+                color: tokens.textSecondary,
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+                flexShrink: 0,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = tokens.bgHover;
+                e.currentTarget.style.borderColor = tokens.accent;
+                e.currentTarget.style.color = tokens.textPrimary;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "transparent";
+                e.currentTarget.style.borderColor = tokens.border;
+                e.currentTarget.style.color = tokens.textSecondary;
+              }}
+            >
+              <MenuIcon size={20} color="currentColor" />
+            </button>
+            <div
+              style={{
+                position: "relative",
+                width: "32px",
+                height: "32px",
+              }}
+            >
+              <Image
+                src="/dub-events-logo.png"
+                alt="Dub Events UK"
+                fill
+                style={{ objectFit: "contain" }}
+              />
+            </div>
+          </div>
+        ) : (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              flex: 1,
+              minWidth: 0,
+            }}
+          >
+            <div
+              style={{
+                position: "relative",
+                width: "32px",
+                height: "32px",
+                flexShrink: 0,
+              }}
+            >
+              <Image
+                src="/dub-events-logo.png"
+                alt="Dub Events UK"
+                fill
+                style={{ objectFit: "contain" }}
+              />
+            </div>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "1px",
+                minWidth: 0,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  color: tokens.textPrimary,
+                  letterSpacing: "-0.01em",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  lineHeight: 1.2,
+                }}
+              >
+                Dub Events UK
+              </span>
+              <span
+                style={{
+                  fontSize: "10px",
+                  fontWeight: 400,
+                  color: tokens.textSecondary,
+                  letterSpacing: "0.01em",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  lineHeight: 1.2,
+                }}
+              >
+                Dashboard
+              </span>
+            </div>
+          </div>
         )}
       </div>
 

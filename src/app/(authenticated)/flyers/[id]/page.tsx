@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { PageLayout } from "@/components/ui/PageLayout";
 import { Container } from "@/components/ui/Container";
@@ -23,11 +23,20 @@ export default function FlyerDetailPage() {
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState<string>("");
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isGeneratingImages, setIsGeneratingImages] = useState(false);
+  const pollingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (flyerId) {
       loadFlyer();
     }
+    
+    // Cleanup polling timeout on unmount
+    return () => {
+      if (pollingTimeoutRef.current) {
+        clearTimeout(pollingTimeoutRef.current);
+      }
+    };
   }, [flyerId]);
 
   async function loadFlyer() {
@@ -98,6 +107,82 @@ export default function FlyerDetailPage() {
     setEditingValue("");
   };
 
+  const handleGenerateImages = async () => {
+    if (!flyerId || !flyer?.information_extraction) return;
+
+    setIsGeneratingImages(true);
+    setError(null);
+
+    try {
+      const result = await flyersApi.generateImages(flyerId);
+
+      if (result.ok) {
+        // Poll for images - check every 3 seconds up to 60 times (3 minutes max)
+        // Image generation can take 30-90 seconds for multiple images
+        const maxAttempts = 60;
+        const pollInterval = 3000; // 3 seconds
+        let attempts = 0;
+        
+        // Clear any existing polling timeout
+        if (pollingTimeoutRef.current) {
+          clearTimeout(pollingTimeoutRef.current);
+        }
+        
+        const pollForImages = () => {
+          attempts++;
+          flyersApi.getById(flyerId).then((pollResult) => {
+            if (pollResult.ok && pollResult.data.generated_images && pollResult.data.generated_images.length > 0) {
+              // Images are ready
+              if (pollingTimeoutRef.current) {
+                clearTimeout(pollingTimeoutRef.current);
+                pollingTimeoutRef.current = null;
+              }
+              setFlyer(pollResult.data);
+              setIsGeneratingImages(false);
+            } else if (attempts < maxAttempts) {
+              // Continue polling
+              pollingTimeoutRef.current = setTimeout(pollForImages, pollInterval);
+            } else {
+              // Give up after max attempts (3 minutes)
+              if (pollingTimeoutRef.current) {
+                clearTimeout(pollingTimeoutRef.current);
+                pollingTimeoutRef.current = null;
+              }
+              setIsGeneratingImages(false);
+              // Still reload to get latest state
+              loadFlyer();
+              // Show a message that it's taking longer than expected
+              setError("Image generation is taking longer than expected. Please refresh the page to check for images.");
+            }
+          }).catch(() => {
+            // On error, stop polling but continue checking
+            if (attempts < maxAttempts) {
+              // Retry on error (network issues, etc.)
+              pollingTimeoutRef.current = setTimeout(pollForImages, pollInterval);
+            } else {
+              // Give up after max attempts
+              if (pollingTimeoutRef.current) {
+                clearTimeout(pollingTimeoutRef.current);
+                pollingTimeoutRef.current = null;
+              }
+              setIsGeneratingImages(false);
+            }
+          });
+        };
+        
+        // Start polling after initial delay
+        pollingTimeoutRef.current = setTimeout(pollForImages, pollInterval);
+      } else {
+        setError(result.error.message || "Failed to generate images");
+        setIsGeneratingImages(false);
+      }
+    } catch (err) {
+      setError("An unexpected error occurred");
+      setIsGeneratingImages(false);
+    }
+  };
+
+
   return (
     <PageLayout
       isLoading={isLoading}
@@ -149,6 +234,13 @@ export default function FlyerDetailPage() {
                   onFieldChange={handleFieldChange}
                   onFieldSave={handleFieldSave}
                   onFieldCancel={handleFieldCancel}
+                  onGenerateImages={handleGenerateImages}
+                  isGeneratingImages={isGeneratingImages}
+                  hasGeneratedImages={
+                    flyer.generated_images !== null &&
+                    flyer.generated_images !== undefined &&
+                    flyer.generated_images.length > 0
+                  }
                 />
               </div>
             </div>
@@ -157,9 +249,8 @@ export default function FlyerDetailPage() {
               <div style={{ marginTop: "24px" }}>
                 <GeneratedImagesSection
                   images={flyer.generated_images}
-                  isLoading={
-                    !flyer.generated_images || flyer.generated_images.length === 0
-                  }
+                  isLoading={isGeneratingImages}
+                  isGenerating={isGeneratingImages}
                 />
                 {flyer.generated_images && flyer.generated_images.length > 0 && (
                   <div style={{ marginTop: "24px" }}>
