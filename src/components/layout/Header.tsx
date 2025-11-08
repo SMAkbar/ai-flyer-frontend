@@ -32,6 +32,7 @@ export function Header({ onToggleSidebar, userEmail }: HeaderProps) {
           alignItems: "center",
           gap: "12px",
           padding: "0 20px",
+          position: "relative",
         }}
       >
         <button
@@ -49,6 +50,8 @@ export function Header({ onToggleSidebar, userEmail }: HeaderProps) {
             color: tokens.textSecondary,
             cursor: "pointer",
             transition: "all 0.2s ease",
+            position: "absolute",
+            left: "20px",
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.backgroundColor = tokens.bgHover;
@@ -67,14 +70,17 @@ export function Header({ onToggleSidebar, userEmail }: HeaderProps) {
           style={{
             display: "flex",
             alignItems: "center",
-            gap: "12px",
+            gap: "16px",
+            position: "absolute",
+            left: "50%",
+            transform: "translateX(-50%)",
           }}
         >
           <div
             style={{
               position: "relative",
-              width: "36px",
-              height: "36px",
+              width: "64px",
+              height: "64px",
               flexShrink: 0,
             }}
           >
@@ -95,7 +101,7 @@ export function Header({ onToggleSidebar, userEmail }: HeaderProps) {
           >
             <div
               style={{
-                fontSize: "16px",
+                fontSize: "18px",
                 fontWeight: 700,
                 color: tokens.textPrimary,
                 letterSpacing: "-0.02em",
@@ -106,7 +112,7 @@ export function Header({ onToggleSidebar, userEmail }: HeaderProps) {
             </div>
             <div
               style={{
-                fontSize: "11px",
+                fontSize: "12px",
                 fontWeight: 400,
                 color: tokens.textSecondary,
                 letterSpacing: "0.01em",

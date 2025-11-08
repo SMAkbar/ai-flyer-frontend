@@ -65,8 +65,8 @@ export default function LoginPage() {
             <div
               style={{
                 position: "relative",
-                width: "80px",
-                height: "80px",
+                width: "240px",
+                height: "240px",
               }}
             >
               <Image
