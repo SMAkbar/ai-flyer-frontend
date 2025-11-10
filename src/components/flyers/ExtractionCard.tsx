@@ -235,10 +235,10 @@ export function ExtractionCard({
               />
             </div>
             <EditableField
-              value={extraction.event_date_time}
+              value={extraction.event_date_time ?? null}
               isEditing={editingField === 'event_date_time'}
               editingValue={editingValue}
-              onEdit={() => onFieldEdit('event_date_time', extraction.event_date_time)}
+              onEdit={() => onFieldEdit('event_date_time', extraction.event_date_time ?? null)}
               onChange={onFieldChange}
               onSave={() => onFieldSave('event_date_time')}
               onCancel={onFieldCancel}
@@ -258,10 +258,10 @@ export function ExtractionCard({
               />
             </div>
             <EditableField
-              value={extraction.location_town_city}
+              value={extraction.location_town_city ?? null}
               isEditing={editingField === 'location_town_city'}
               editingValue={editingValue}
-              onEdit={() => onFieldEdit('location_town_city', extraction.location_town_city)}
+              onEdit={() => onFieldEdit('location_town_city', extraction.location_town_city ?? null)}
               onChange={onFieldChange}
               onSave={() => onFieldSave('location_town_city')}
               onCancel={onFieldCancel}
@@ -281,10 +281,10 @@ export function ExtractionCard({
               />
             </div>
             <EditableField
-              value={extraction.event_title}
+              value={extraction.event_title ?? null}
               isEditing={editingField === 'event_title'}
               editingValue={editingValue}
-              onEdit={() => onFieldEdit('event_title', extraction.event_title)}
+              onEdit={() => onFieldEdit('event_title', extraction.event_title ?? null)}
               onChange={onFieldChange}
               onSave={() => onFieldSave('event_title')}
               onCancel={onFieldCancel}
@@ -334,11 +334,11 @@ export function ExtractionCard({
               />
             </div>
             <EditableField
-              value={extraction.performers_djs_soundsystems}
+              value={extraction.performers_djs_soundsystems ?? null}
               isEditing={editingField === 'performers_djs_soundsystems'}
               editingValue={editingValue}
               onEdit={() =>
-                onFieldEdit('performers_djs_soundsystems', extraction.performers_djs_soundsystems)
+                onFieldEdit('performers_djs_soundsystems', extraction.performers_djs_soundsystems ?? null)
               }
               onChange={onFieldChange}
               onSave={() => onFieldSave('performers_djs_soundsystems')}
