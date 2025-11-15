@@ -1,16 +1,23 @@
 import { apiClient } from "./client";
-import type { FlyerGeneratedImage } from "./flyers";
 
 export type PostStatus = "pending" | "scheduled" | "posting" | "posted" | "failed";
 
-export type ScheduledPostRead = FlyerGeneratedImage & {
-  instagram_post_status: PostStatus;
+export type InstagramPostRead = {
+  id: number;
+  flyer_generated_image_id: number;
+  post_status: PostStatus;
   instagram_post_id: string | null;
-  instagram_post_error: string | null;
-  instagram_post_caption: string | null;
-  instagram_post_hashtags: string | null;
+  post_error: string | null;
+  caption: string | null;
+  hashtags: string | null;
   is_selected_for_posting: boolean;
+  scheduled_at: string | null;
+  posted_at: string | null;
+  created_at: string;
+  updated_at: string;
 };
+
+export type ScheduledPostRead = InstagramPostRead;
 
 export type SelectImagesRequest = {
   time_date_image_id: number | null;
@@ -20,7 +27,7 @@ export type SelectImagesRequest = {
 
 export type SelectImagesResponse = {
   flyer_id: number;
-  selected_images: ScheduledPostRead[];
+  selected_posts: InstagramPostRead[];
 };
 
 export type SchedulePostRequest = {
@@ -35,6 +42,16 @@ export type SchedulePostResponse = ScheduledPostRead;
 export type ScheduledPostsResponse = {
   flyer_id: number;
   scheduled_posts: ScheduledPostRead[];
+};
+
+export type ScheduledPostWithFlyerRead = InstagramPostRead & {
+  flyer_title: string;
+  image_type: string;
+  cloudfront_url: string | null;
+};
+
+export type AllScheduledPostsResponse = {
+  scheduled_posts: ScheduledPostWithFlyerRead[];
 };
 
 export const instagramApi = {
@@ -66,5 +83,8 @@ export const instagramApi = {
       facebook_page_id: string | null;
       connected_at: string | null;
     }>("/instagram/status"),
+
+  getAllScheduledPosts: () =>
+    apiClient.get<AllScheduledPostsResponse>("/instagram/scheduled"),
 };
 

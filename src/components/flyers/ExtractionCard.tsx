@@ -8,7 +8,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { tokens } from '@/components/theme/tokens';
-import { CubeIcon, CheckIcon, WarningIcon, ClockIcon } from '@/components/icons';
+import { CubeIcon, CheckIcon, WarningIcon, ClockIcon, ImageIcon } from '@/components/icons';
 
 export type ExtractionData = {
   status: 'completed' | 'processing' | 'failed' | 'pending';
@@ -82,6 +82,14 @@ function formatConfidence(confidenceLevel: string | null | undefined): string {
   } catch {
     return 'N/A';
   }
+}
+
+// Helper function to convert hex color to rgba with opacity
+function hexToRgba(hex: string, opacity: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
 }
 
 // Helper component for confidence badge
@@ -222,129 +230,178 @@ export function ExtractionCard({
       </div>
 
       {extraction.status === 'completed' ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-              <FieldLabel>Event Date/Time</FieldLabel>
-              <ConfidenceBadge
-                status={getFieldConfidenceStatus(
-                  extraction.event_date_time,
-                  extraction.field_confidence_levels?.event_date_time
-                )}
-                confidence={extraction.field_confidence_levels?.event_date_time}
-              />
-            </div>
-            <EditableField
-              value={extraction.event_date_time ?? null}
-              isEditing={editingField === 'event_date_time'}
-              editingValue={editingValue}
-              onEdit={() => onFieldEdit('event_date_time', extraction.event_date_time ?? null)}
-              onChange={onFieldChange}
-              onSave={() => onFieldSave('event_date_time')}
-              onCancel={onFieldCancel}
-              disabled={isUpdating}
-            />
-          </div>
-
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-              <FieldLabel>Location</FieldLabel>
-              <ConfidenceBadge
-                status={getFieldConfidenceStatus(
-                  extraction.location_town_city,
-                  extraction.field_confidence_levels?.location_town_city
-                )}
-                confidence={extraction.field_confidence_levels?.location_town_city}
-              />
-            </div>
-            <EditableField
-              value={extraction.location_town_city ?? null}
-              isEditing={editingField === 'location_town_city'}
-              editingValue={editingValue}
-              onEdit={() => onFieldEdit('location_town_city', extraction.location_town_city ?? null)}
-              onChange={onFieldChange}
-              onSave={() => onFieldSave('location_town_city')}
-              onCancel={onFieldCancel}
-              disabled={isUpdating}
-            />
-          </div>
-
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-              <FieldLabel>Event Title</FieldLabel>
-              <ConfidenceBadge
-                status={getFieldConfidenceStatus(
-                  extraction.event_title,
-                  extraction.field_confidence_levels?.event_title
-                )}
-                confidence={extraction.field_confidence_levels?.event_title}
-              />
-            </div>
-            <EditableField
-              value={extraction.event_title ?? null}
-              isEditing={editingField === 'event_title'}
-              editingValue={editingValue}
-              onEdit={() => onFieldEdit('event_title', extraction.event_title ?? null)}
-              onChange={onFieldChange}
-              onSave={() => onFieldSave('event_title')}
-              onCancel={onFieldCancel}
-              disabled={isUpdating}
-            />
-          </div>
-
-          {extraction.venue_name && (
-            <div>
-              <div
-                style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}
-              >
-                <FieldLabel>Venue</FieldLabel>
-                <ConfidenceBadge
-                  status={getFieldConfidenceStatus(
-                    extraction.venue_name,
-                    extraction.field_confidence_levels?.venue_name
-                  )}
-                  confidence={extraction.field_confidence_levels?.venue_name}
-                />
-              </div>
-              <div
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          {/* Image Generation Fields Section */}
+          <div
+            style={{
+              padding: '20px',
+              backgroundColor: hexToRgba(tokens.accent, 0.08),
+              border: `2px solid ${hexToRgba(tokens.accent, 0.25)}`,
+              borderRadius: '12px',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                marginBottom: '20px',
+              }}
+            >
+              <ImageIcon size={18} color={tokens.accent} />
+              <h3
                 style={{
                   fontSize: '16px',
-                  color: tokens.textPrimary,
-                  fontWeight: 500,
-                  padding: '8px 12px',
-                  backgroundColor: tokens.bgElevated,
-                  border: `1px solid ${tokens.border}`,
-                  borderRadius: '8px',
+                  fontWeight: 600,
+                  color: tokens.accent,
+                  margin: 0,
                 }}
               >
-                {extraction.venue_name}
+                Fields Used for Image Generation
+              </h3>
+              <div
+                style={{
+                  marginLeft: 'auto',
+                  fontSize: '12px',
+                  color: tokens.textSecondary,
+                  fontWeight: 500,
+                  padding: '4px 10px',
+                  backgroundColor: hexToRgba(tokens.accent, 0.12),
+                  borderRadius: '6px',
+                }}
+              >
+                Requires ≥90% confidence
               </div>
             </div>
-          )}
 
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-              <FieldLabel>Performers/DJs/Soundsystems</FieldLabel>
-              <ConfidenceBadge
-                status={getFieldConfidenceStatus(
-                  extraction.performers_djs_soundsystems,
-                  extraction.field_confidence_levels?.performers_djs_soundsystems
-                )}
-                confidence={extraction.field_confidence_levels?.performers_djs_soundsystems}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  <FieldLabel>Event Date/Time</FieldLabel>
+                  <ConfidenceBadge
+                    status={getFieldConfidenceStatus(
+                      extraction.event_date_time,
+                      extraction.field_confidence_levels?.event_date_time
+                    )}
+                    confidence={extraction.field_confidence_levels?.event_date_time}
+                  />
+                </div>
+                <EditableField
+                  value={extraction.event_date_time ?? null}
+                  isEditing={editingField === 'event_date_time'}
+                  editingValue={editingValue}
+                  onEdit={() => onFieldEdit('event_date_time', extraction.event_date_time ?? null)}
+                  onChange={onFieldChange}
+                  onSave={() => onFieldSave('event_date_time')}
+                  onCancel={onFieldCancel}
+                  disabled={isUpdating}
+                />
+              </div>
+
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  <FieldLabel>Performers/DJs/Soundsystems</FieldLabel>
+                  <ConfidenceBadge
+                    status={getFieldConfidenceStatus(
+                      extraction.performers_djs_soundsystems,
+                      extraction.field_confidence_levels?.performers_djs_soundsystems
+                    )}
+                    confidence={extraction.field_confidence_levels?.performers_djs_soundsystems}
+                  />
+                </div>
+                <EditableField
+                  value={extraction.performers_djs_soundsystems ?? null}
+                  isEditing={editingField === 'performers_djs_soundsystems'}
+                  editingValue={editingValue}
+                  onEdit={() =>
+                    onFieldEdit('performers_djs_soundsystems', extraction.performers_djs_soundsystems ?? null)
+                  }
+                  onChange={onFieldChange}
+                  onSave={() => onFieldSave('performers_djs_soundsystems')}
+                  onCancel={onFieldCancel}
+                  disabled={isUpdating}
+                />
+              </div>
+
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  <FieldLabel>Location</FieldLabel>
+                  <ConfidenceBadge
+                    status={getFieldConfidenceStatus(
+                      extraction.location_town_city,
+                      extraction.field_confidence_levels?.location_town_city
+                    )}
+                    confidence={extraction.field_confidence_levels?.location_town_city}
+                  />
+                </div>
+                <EditableField
+                  value={extraction.location_town_city ?? null}
+                  isEditing={editingField === 'location_town_city'}
+                  editingValue={editingValue}
+                  onEdit={() => onFieldEdit('location_town_city', extraction.location_town_city ?? null)}
+                  onChange={onFieldChange}
+                  onSave={() => onFieldSave('location_town_city')}
+                  onCancel={onFieldCancel}
+                  disabled={isUpdating}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Other Fields Section */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                <FieldLabel>Event Title</FieldLabel>
+                <ConfidenceBadge
+                  status={getFieldConfidenceStatus(
+                    extraction.event_title,
+                    extraction.field_confidence_levels?.event_title
+                  )}
+                  confidence={extraction.field_confidence_levels?.event_title}
+                />
+              </div>
+              <EditableField
+                value={extraction.event_title ?? null}
+                isEditing={editingField === 'event_title'}
+                editingValue={editingValue}
+                onEdit={() => onFieldEdit('event_title', extraction.event_title ?? null)}
+                onChange={onFieldChange}
+                onSave={() => onFieldSave('event_title')}
+                onCancel={onFieldCancel}
+                disabled={isUpdating}
               />
             </div>
-            <EditableField
-              value={extraction.performers_djs_soundsystems ?? null}
-              isEditing={editingField === 'performers_djs_soundsystems'}
-              editingValue={editingValue}
-              onEdit={() =>
-                onFieldEdit('performers_djs_soundsystems', extraction.performers_djs_soundsystems ?? null)
-              }
-              onChange={onFieldChange}
-              onSave={() => onFieldSave('performers_djs_soundsystems')}
-              onCancel={onFieldCancel}
-              disabled={isUpdating}
-            />
+
+            {extraction.venue_name && (
+              <div>
+                <div
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}
+                >
+                  <FieldLabel>Venue</FieldLabel>
+                  <ConfidenceBadge
+                    status={getFieldConfidenceStatus(
+                      extraction.venue_name,
+                      extraction.field_confidence_levels?.venue_name
+                    )}
+                    confidence={extraction.field_confidence_levels?.venue_name}
+                  />
+                </div>
+                <div
+                  style={{
+                    fontSize: '16px',
+                    color: tokens.textPrimary,
+                    fontWeight: 500,
+                    padding: '8px 12px',
+                    backgroundColor: tokens.bgElevated,
+                    border: `1px solid ${tokens.border}`,
+                    borderRadius: '8px',
+                  }}
+                >
+                  {extraction.venue_name}
+                </div>
+              </div>
+            )}
           </div>
 
           {extraction.status === 'completed' && onGenerateImages && (

@@ -20,7 +20,7 @@ This feature builds on:
 - Display generated images for a flyer in the detail page
 - Show all three image types (time/date, performers, location) when available
 - Provide image download functionality
-- Show image generation status (loading, completed, failed)
+- Show image generation status (requested, generating, generated, failed)
 - Display images in a clean, grid-based layout
 - Show empty state when no images are generated yet
 - Handle loading states gracefully
@@ -73,33 +73,39 @@ The generated images section will be added below the extracted information card 
 - Section title: "Generated Promotional Images"
 - Grid layout: 3 columns on desktop, 1 column on mobile
 - Each image card shows:
-  - Image preview
+  - Image preview (only when status is "generated", otherwise placeholder)
   - Image type label (Time/Date, Performers, Location)
-  - Download button
+  - Generation status badge (requested, generating, generated, failed)
+  - Download button (only when status is "generated")
+  - Error message (if status is "failed")
   - Creation timestamp
 - Empty state when no images available
-- Loading state while images are being generated
+- Status-aware display for different generation states
 
 **Visual Design:**
 - Use existing Card component for consistency
 - Images displayed in 1:1 aspect ratio containers
-- Download button with icon
-- Subtle loading animation
-- Error state if image fails to load
+- Download button with icon (only when status is "generated")
+- Status badge showing generation status (requested, generating, generated, failed)
+- Subtle loading animation for "generating" status
+- Error state if image fails to load or generation failed
+- Show error message if `generation_error` is present
 
 ### Empty State
 
-When no images are generated yet (or generation in progress):
+When no images are generated yet:
 - Show message: "No promotional images generated yet"
 - Subtext: "Images will be automatically generated when all extracted fields have confidence above 90%"
 - Show loading indicator if extraction is in progress
 
-### Loading State
+### Loading/Status States
 
 When images are being generated:
-- Show skeleton loaders or placeholder cards
-- Show message: "Generating promotional images..."
-- Auto-refresh or polling until images are available
+- **Requested**: Show placeholder card with "Requested" status badge
+- **Generating**: Show skeleton loader or placeholder with "Generating..." status badge and spinner
+- **Generated**: Show image preview with download button and "Generated" status badge
+- **Failed**: Show error card with "Failed" status badge and error message from `generation_error`
+- Auto-refresh or polling until images are available or failed
 
 ## API design
 
@@ -124,10 +130,9 @@ export type FlyerGeneratedImageRead = {
   id: number;
   flyer_id: number;
   image_type: GeneratedImageType;
-  cloudfront_url: string;
-  instagram_post_content: string | null;
-  instagram_posted_at: string | null;
-  instagram_scheduled_at: string | null;
+  cloudfront_url: string | null;  // Nullable until generated
+  generation_status: "requested" | "generating" | "generated" | "failed";
+  generation_error: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -283,4 +288,12 @@ frontend/src/
   - Images are now generated when ALL extracted fields with data have individual confidence > 90%
   - Uses per-field confidence levels instead of overall confidence level
   - Fields without data are skipped in the confidence check
+- 2025-11-15 — Changed — Updated to reflect model refactoring:
+  - Removed Instagram-related fields from `FlyerGeneratedImage` type
+  - Added `generation_status` field to track generation lifecycle
+  - Added `generation_error` field to display error messages
+  - Made `cloudfront_url` nullable (only available after successful generation)
+  - Updated UI to show generation status badges
+  - Updated component to handle different generation states (requested, generating, generated, failed)
+  - Download button only shown when status is "generated"
 

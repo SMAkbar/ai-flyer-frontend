@@ -30,20 +30,15 @@ export type FlyerInformationExtraction = {
 
 export type GeneratedImageType = "time_date" | "performers" | "location";
 
+export type ImageGenerationStatus = "requested" | "generating" | "generated" | "failed";
+
 export type FlyerGeneratedImage = {
   id: number;
   flyer_id: number;
   image_type: GeneratedImageType;
-  cloudfront_url: string;
-  instagram_post_content: string | null;
-  instagram_post_status?: "pending" | "scheduled" | "posting" | "posted" | "failed";
-  instagram_post_id?: string | null;
-  instagram_post_error?: string | null;
-  instagram_post_caption?: string | null;
-  instagram_post_hashtags?: string | null;
-  is_selected_for_posting?: boolean;
-  instagram_posted_at: string | null;
-  instagram_scheduled_at: string | null;
+  cloudfront_url: string | null;  // Nullable until image is generated
+  generation_status: ImageGenerationStatus;
+  generation_error: string | null;
   created_at: string;
   updated_at: string;
 };

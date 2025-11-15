@@ -40,3 +40,4 @@ Add a login page and middleware to guard routes using a JWT stored in a cookie.
 2025-10-30 — Added — Login page, API client, and route-protecting middleware
 
 
+

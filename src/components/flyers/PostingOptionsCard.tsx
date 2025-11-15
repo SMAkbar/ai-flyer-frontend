@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -13,6 +13,7 @@ type PostingOptionsCardProps = {
   caption: string;
   hashtags: string;
   scheduledAt: string; // ISO datetime string
+  postingMode: PostingMode; // Controlled from parent
   onCaptionChange: (caption: string) => void;
   onHashtagsChange: (hashtags: string) => void;
   onScheduledAtChange: (scheduledAt: string) => void;
@@ -20,12 +21,14 @@ type PostingOptionsCardProps = {
   onSubmit: () => void;
   isSubmitting?: boolean;
   disabled?: boolean;
+  categoryLabel?: string; // Optional label to show which category this is for
 };
 
 export function PostingOptionsCard({
   caption,
   hashtags,
   scheduledAt,
+  postingMode,
   onCaptionChange,
   onHashtagsChange,
   onScheduledAtChange,
@@ -33,11 +36,9 @@ export function PostingOptionsCard({
   onSubmit,
   isSubmitting = false,
   disabled = false,
+  categoryLabel,
 }: PostingOptionsCardProps) {
-  const [postingMode, setPostingMode] = useState<PostingMode>("now");
-
   const handleModeChange = (mode: PostingMode) => {
-    setPostingMode(mode);
     onPostingModeChange(mode);
   };
 
@@ -75,7 +76,7 @@ export function PostingOptionsCard({
           letterSpacing: "-0.01em",
         }}
       >
-        Posting Options
+        {categoryLabel ? `${categoryLabel} - Posting Options` : "Posting Options"}
       </h2>
 
       {/* Caption */}
@@ -260,8 +261,8 @@ export function PostingOptionsCard({
         {isSubmitting
           ? "Scheduling..."
           : postingMode === "now"
-          ? "Post Now"
-          : "Schedule Posts"}
+          ? `Post ${categoryLabel ? categoryLabel : ""} Now`.trim()
+          : `Schedule ${categoryLabel ? categoryLabel : ""} Post`.trim()}
       </Button>
     </Card>
   );

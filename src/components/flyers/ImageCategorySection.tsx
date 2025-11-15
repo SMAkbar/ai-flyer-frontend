@@ -23,7 +23,14 @@ export function ImageCategorySection({
   onSelectImage,
   disabled = false,
 }: ImageCategorySectionProps) {
-  const categoryImages = images.filter((img) => img.image_type === categoryType);
+  // Filter and sort images by creation date (newest first)
+  const categoryImages = images
+    .filter((img) => img.image_type === categoryType)
+    .sort((a, b) => {
+      const dateA = new Date(a.created_at).getTime();
+      const dateB = new Date(b.created_at).getTime();
+      return dateB - dateA; // Newest first
+    });
 
   if (categoryImages.length === 0) {
     return null; // Don't render section if no images
@@ -38,17 +45,38 @@ export function ImageCategorySection({
         padding: "24px",
       }}
     >
-      <h2
+      <div
         style={{
-          fontSize: "18px",
-          fontWeight: 600,
-          color: tokens.textPrimary,
-          marginBottom: "16px",
-          letterSpacing: "-0.01em",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: "8px",
         }}
       >
-        {categoryLabel}
-      </h2>
+        <h2
+          style={{
+            fontSize: "18px",
+            fontWeight: 600,
+            color: tokens.textPrimary,
+            margin: 0,
+            letterSpacing: "-0.01em",
+          }}
+        >
+          {categoryLabel}
+        </h2>
+        <div
+          style={{
+            fontSize: "12px",
+            color: tokens.textSecondary,
+            fontWeight: 500,
+            padding: "2px 8px",
+            backgroundColor: tokens.bgHover,
+            borderRadius: "4px",
+          }}
+        >
+          {categoryImages.length} {categoryImages.length === 1 ? "option" : "options"}
+        </div>
+      </div>
       <p
         style={{
           fontSize: "14px",

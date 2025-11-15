@@ -24,13 +24,23 @@ export function InstagramSchedulingPage({
   const [selectedPerformersImageId, setSelectedPerformersImageId] = useState<number | null>(null);
   const [selectedLocationImageId, setSelectedLocationImageId] = useState<number | null>(null);
 
-  // State for posting options
+  // State for posting options (shared caption and hashtags)
   const [caption, setCaption] = useState("");
   const [hashtags, setHashtags] = useState("");
-  const [scheduledAt, setScheduledAt] = useState<string>(
+
+  // State for per-image scheduling (one per category)
+  const [timeDatePostingMode, setTimeDatePostingMode] = useState<"now" | "schedule">("now");
+  const [timeDateScheduledAt, setTimeDateScheduledAt] = useState<string>(
     new Date().toISOString()
   );
-  const [postingMode, setPostingMode] = useState<"now" | "schedule">("now");
+  const [performersPostingMode, setPerformersPostingMode] = useState<"now" | "schedule">("now");
+  const [performersScheduledAt, setPerformersScheduledAt] = useState<string>(
+    new Date().toISOString()
+  );
+  const [locationPostingMode, setLocationPostingMode] = useState<"now" | "schedule">("now");
+  const [locationScheduledAt, setLocationScheduledAt] = useState<string>(
+    new Date().toISOString()
+  );
 
   // State for scheduled posts
   const [scheduledPosts, setScheduledPosts] = useState<ScheduledPostRead[]>([]);
@@ -143,11 +153,25 @@ export function InstagramSchedulingPage({
       return;
     }
 
-    // Validate scheduled time if scheduling
-    if (postingMode === "schedule") {
-      const scheduledDate = new Date(scheduledAt);
+    // Validate scheduled times if scheduling
+    if (selectedTimeDateImageId && timeDatePostingMode === "schedule") {
+      const scheduledDate = new Date(timeDateScheduledAt);
       if (scheduledDate <= new Date()) {
-        setError("Scheduled time must be in the future");
+        setError("Time/Date image scheduled time must be in the future");
+        return;
+      }
+    }
+    if (selectedPerformersImageId && performersPostingMode === "schedule") {
+      const scheduledDate = new Date(performersScheduledAt);
+      if (scheduledDate <= new Date()) {
+        setError("Performers image scheduled time must be in the future");
+        return;
+      }
+    }
+    if (selectedLocationImageId && locationPostingMode === "schedule") {
+      const scheduledDate = new Date(locationScheduledAt);
+      if (scheduledDate <= new Date()) {
+        setError("Location image scheduled time must be in the future");
         return;
       }
     }
@@ -169,19 +193,31 @@ export function InstagramSchedulingPage({
         return;
       }
 
-      // Then, schedule each selected image
-      const scheduledDateTime = postingMode === "now" 
-        ? new Date().toISOString()
-        : scheduledAt;
+      // Then, schedule each selected image with its own schedule time
+      const schedulePromises = selectResult.data.selected_images.map((image) => {
+        // Determine the schedule time based on image type
+        let scheduledDateTime: string;
+        if (image.image_type === "time_date") {
+          scheduledDateTime = timeDatePostingMode === "now" 
+            ? new Date().toISOString()
+            : timeDateScheduledAt;
+        } else if (image.image_type === "performers") {
+          scheduledDateTime = performersPostingMode === "now" 
+            ? new Date().toISOString()
+            : performersScheduledAt;
+        } else { // location
+          scheduledDateTime = locationPostingMode === "now" 
+            ? new Date().toISOString()
+            : locationScheduledAt;
+        }
 
-      const schedulePromises = selectResult.data.selected_images.map((image) =>
-        instagramApi.schedulePost(flyer.id, {
+        return instagramApi.schedulePost(flyer.id, {
           image_id: image.id,
           scheduled_at: scheduledDateTime,
           caption: caption || null,
           hashtags: hashtags || null,
-        })
-      );
+        });
+      });
 
       const scheduleResults = await Promise.all(schedulePromises);
 
@@ -190,11 +226,37 @@ export function InstagramSchedulingPage({
         const errorMessage = scheduleResults.find((r) => !r.ok)?.error.message;
         setError(errorMessage || "Failed to schedule some posts");
       } else {
-        setSuccess(
-          postingMode === "now"
-            ? "Posts are being published now!"
-            : `Posts scheduled for ${new Date(scheduledDateTime).toLocaleString()}`
-        );
+        // Determine success message based on posting modes
+        const allNow = scheduleResults.every((result, index) => {
+          const image = selectResult.data.selected_images[index];
+          if (image.image_type === "time_date") return timeDatePostingMode === "now";
+          if (image.image_type === "performers") return performersPostingMode === "now";
+          return locationPostingMode === "now";
+        });
+        
+        if (allNow) {
+          setSuccess("Posts are being published now!");
+        } else {
+          const scheduledTimes = scheduleResults
+            .map((result, index) => {
+              const image = selectResult.data.selected_images[index];
+              if (image.image_type === "time_date") {
+                return timeDatePostingMode === "schedule" ? timeDateScheduledAt : null;
+              }
+              if (image.image_type === "performers") {
+                return performersPostingMode === "schedule" ? performersScheduledAt : null;
+              }
+              return locationPostingMode === "schedule" ? locationScheduledAt : null;
+            })
+            .filter((time): time is string => time !== null)
+            .map(time => new Date(time).toLocaleString());
+          
+          if (scheduledTimes.length > 0) {
+            setSuccess(`Posts scheduled for: ${scheduledTimes.join(", ")}`);
+          } else {
+            setSuccess("Posts scheduled successfully!");
+          }
+        }
         
         // Reload scheduled posts
         await loadScheduledPosts();
@@ -273,7 +335,7 @@ export function InstagramSchedulingPage({
         </Alert>
       )}
 
-      {/* Image Category Sections */}
+      {/* Image Category Sections with Scheduling */}
       <ImageCategorySection
         categoryType="time_date"
         categoryLabel="Time/Date"
@@ -282,6 +344,22 @@ export function InstagramSchedulingPage({
         onSelectImage={(id) => handleSelectImage("time_date", id)}
         disabled={isSubmitting}
       />
+      {selectedTimeDateImageId && (
+        <PostingOptionsCard
+          caption={caption}
+          hashtags={hashtags}
+          scheduledAt={timeDateScheduledAt}
+          postingMode={timeDatePostingMode}
+          onCaptionChange={setCaption}
+          onHashtagsChange={setHashtags}
+          onScheduledAtChange={setTimeDateScheduledAt}
+          onPostingModeChange={setTimeDatePostingMode}
+          onSubmit={handleSubmit}
+          isSubmitting={isSubmitting}
+          disabled={isLoading}
+          categoryLabel="Time/Date"
+        />
+      )}
 
       <ImageCategorySection
         categoryType="performers"
@@ -291,6 +369,22 @@ export function InstagramSchedulingPage({
         onSelectImage={(id) => handleSelectImage("performers", id)}
         disabled={isSubmitting}
       />
+      {selectedPerformersImageId && (
+        <PostingOptionsCard
+          caption={caption}
+          hashtags={hashtags}
+          scheduledAt={performersScheduledAt}
+          postingMode={performersPostingMode}
+          onCaptionChange={setCaption}
+          onHashtagsChange={setHashtags}
+          onScheduledAtChange={setPerformersScheduledAt}
+          onPostingModeChange={setPerformersPostingMode}
+          onSubmit={handleSubmit}
+          isSubmitting={isSubmitting}
+          disabled={isLoading}
+          categoryLabel="Performers"
+        />
+      )}
 
       <ImageCategorySection
         categoryType="location"
@@ -300,22 +394,20 @@ export function InstagramSchedulingPage({
         onSelectImage={(id) => handleSelectImage("location", id)}
         disabled={isSubmitting}
       />
-
-      {/* Posting Options */}
-      {(selectedTimeDateImageId ||
-        selectedPerformersImageId ||
-        selectedLocationImageId) && (
+      {selectedLocationImageId && (
         <PostingOptionsCard
           caption={caption}
           hashtags={hashtags}
-          scheduledAt={scheduledAt}
+          scheduledAt={locationScheduledAt}
+          postingMode={locationPostingMode}
           onCaptionChange={setCaption}
           onHashtagsChange={setHashtags}
-          onScheduledAtChange={setScheduledAt}
-          onPostingModeChange={setPostingMode}
+          onScheduledAtChange={setLocationScheduledAt}
+          onPostingModeChange={setLocationPostingMode}
           onSubmit={handleSubmit}
           isSubmitting={isSubmitting}
           disabled={isLoading}
+          categoryLabel="Location"
         />
       )}
 

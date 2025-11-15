@@ -29,6 +29,7 @@ export { MapPinIcon } from "./MapPin";
 export { CubeIcon } from "./Cube";
 export { BriefcaseIcon } from "./Briefcase";
 export { MailIcon } from "./Mail";
+export { RefreshIcon } from "./Refresh";
 
 export type { IconProps } from "./types";
 

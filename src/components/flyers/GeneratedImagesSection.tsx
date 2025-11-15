@@ -162,6 +162,13 @@ export function GeneratedImagesSection({
     );
   }
 
+  // Sort images by creation date (newest first)
+  const sortedImages = [...images].sort((a, b) => {
+    const dateA = new Date(a.created_at).getTime();
+    const dateB = new Date(b.created_at).getTime();
+    return dateB - dateA; // Newest first
+  });
+
   // Images available
   return (
     <Card
@@ -172,17 +179,38 @@ export function GeneratedImagesSection({
         padding: "24px",
       }}
     >
-      <h2
+      <div
         style={{
-          fontSize: "20px",
-          fontWeight: 600,
-          color: tokens.textPrimary,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
           marginBottom: "20px",
-          letterSpacing: "-0.01em",
         }}
       >
-        Generated Promotional Images
-      </h2>
+        <h2
+          style={{
+            fontSize: "20px",
+            fontWeight: 600,
+            color: tokens.textPrimary,
+            margin: 0,
+            letterSpacing: "-0.01em",
+          }}
+        >
+          Generated Promotional Images
+        </h2>
+        <div
+          style={{
+            fontSize: "14px",
+            color: tokens.textSecondary,
+            fontWeight: 500,
+            padding: "4px 12px",
+            backgroundColor: tokens.bgHover,
+            borderRadius: "6px",
+          }}
+        >
+          {sortedImages.length} {sortedImages.length === 1 ? "image" : "images"}
+        </div>
+      </div>
       <div
         style={{
           display: "grid",
@@ -190,7 +218,7 @@ export function GeneratedImagesSection({
           gap: "20px",
         }}
       >
-        {images.map((image) => (
+        {sortedImages.map((image) => (
           <GeneratedImageCard key={image.id} image={image} />
         ))}
       </div>

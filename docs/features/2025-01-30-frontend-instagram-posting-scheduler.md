@@ -180,14 +180,22 @@ import type { FlyerGeneratedImage } from "./flyers";
 
 export type PostStatus = "pending" | "scheduled" | "posting" | "posted" | "failed";
 
-export type ScheduledPostRead = FlyerGeneratedImage & {
-  instagram_post_status: PostStatus;
+export type InstagramPostRead = {
+  id: number;
+  flyer_generated_image_id: number;
+  post_status: PostStatus;
   instagram_post_id: string | null;
-  instagram_post_error: string | null;
-  instagram_post_caption: string | null;
-  instagram_post_hashtags: string | null;
+  post_error: string | null;
+  caption: string | null;
+  hashtags: string | null;
   is_selected_for_posting: boolean;
+  scheduled_at: string | null;
+  posted_at: string | null;
+  created_at: string;
+  updated_at: string;
 };
+
+export type ScheduledPostRead = InstagramPostRead;
 
 export type SelectImagesRequest = {
   time_date_image_id: number | null;
@@ -197,7 +205,7 @@ export type SelectImagesRequest = {
 
 export type SelectImagesResponse = {
   flyer_id: number;
-  selected_images: ScheduledPostRead[];
+  selected_posts: InstagramPostRead[];
 };
 
 export type SchedulePostRequest = {
@@ -949,10 +957,10 @@ export function ScheduledPostsCard({
                 >
                   {getImageTypeLabel(post.image_type)}
                 </h3>
-                <PostStatusBadge status={post.instagram_post_status} />
+                <PostStatusBadge status={post.post_status} />
               </div>
 
-              {post.instagram_scheduled_at && (
+              {post.scheduled_at && (
                 <p
                   style={{
                     margin: 0,
@@ -961,11 +969,11 @@ export function ScheduledPostsCard({
                     marginBottom: "4px",
                   }}
                 >
-                  Scheduled: {formatDate(post.instagram_scheduled_at)}
+                  Scheduled: {formatDate(post.scheduled_at)}
                 </p>
               )}
 
-              {post.instagram_posted_at && (
+              {post.posted_at && (
                 <p
                   style={{
                     margin: 0,
@@ -973,11 +981,11 @@ export function ScheduledPostsCard({
                     color: tokens.textSecondary,
                   }}
                 >
-                  Posted: {formatDate(post.instagram_posted_at)}
+                  Posted: {formatDate(post.posted_at)}
                 </p>
               )}
 
-              {post.instagram_post_error && (
+              {post.post_error && (
                 <p
                   style={{
                     margin: 0,
@@ -986,23 +994,23 @@ export function ScheduledPostsCard({
                     marginTop: "4px",
                   }}
                 >
-                  Error: {post.instagram_post_error}
+                  Error: {post.post_error}
                 </p>
               )}
             </div>
 
             {/* Cancel Button */}
-            {post.instagram_post_status === "scheduled" &&
-              !post.instagram_posted_at && (
+            {post.post_status === "scheduled" &&
+              !post.posted_at && (
                 <Button
                   variant="secondary"
-                  onClick={() => onCancelPost(post.id)}
-                  disabled={isCanceling === post.id}
+                  onClick={() => onCancelPost(post.flyer_generated_image_id)}
+                  disabled={isCanceling === post.flyer_generated_image_id}
                   style={{
                     flexShrink: 0,
                   }}
                 >
-                  {isCanceling === post.id ? "Canceling..." : "Cancel"}
+                  {isCanceling === post.flyer_generated_image_id ? "Canceling..." : "Cancel"}
                 </Button>
               )}
           </div>
@@ -1187,21 +1195,9 @@ export function InstagramSchedulingPage({
         setScheduledPosts(result.data.scheduled_posts);
 
         // Pre-select images that are already scheduled
-        result.data.scheduled_posts.forEach((post) => {
-          if (post.is_selected_for_posting) {
-            switch (post.image_type) {
-              case "time_date":
-                setSelectedTimeDateImageId(post.id);
-                break;
-              case "performers":
-                setSelectedPerformersImageId(post.id);
-                break;
-              case "location":
-                setSelectedLocationImageId(post.id);
-                break;
-            }
-          }
-        });
+        // Note: Need to fetch image details to get image_type
+        // For now, we'll rely on the flyer's generated_images to match
+        // This will be handled by matching flyer_generated_image_id
       } else {
         setError(result.error.message || "Failed to load scheduled posts");
       }
@@ -1271,14 +1267,14 @@ export function InstagramSchedulingPage({
         return;
       }
 
-      // Then, schedule each selected image
+      // Then, schedule each selected post
       const scheduledDateTime = postingMode === "now" 
         ? new Date().toISOString()
         : scheduledAt;
 
-      const schedulePromises = selectResult.data.selected_images.map((image) =>
+      const schedulePromises = selectResult.data.selected_posts.map((post) =>
         instagramApi.schedulePost(flyer.id, {
-          image_id: image.id,
+          image_id: post.flyer_generated_image_id,
           scheduled_at: scheduledDateTime,
           caption: caption || null,
           hashtags: hashtags || null,
@@ -1545,4 +1541,12 @@ import { useRouter } from "next/navigation";
 ## Changelog
 
 - 2025-01-30 — Added — Initial frontend feature plan created
+- 2025-11-15 — Changed — Updated to reflect model refactoring:
+  - Instagram posts are now separate from generated images
+  - Updated types to use `InstagramPostRead` instead of extending `FlyerGeneratedImage`
+  - Updated API response fields (`selected_posts` instead of `selected_images`)
+  - Updated status field names (`post_status` instead of `instagram_post_status`)
+  - Updated error field names (`post_error` instead of `instagram_post_error`)
+  - Updated scheduled/posted field names (`scheduled_at`, `posted_at` instead of `instagram_scheduled_at`, `instagram_posted_at`)
+  - Updated component to work with separate Instagram post model
 

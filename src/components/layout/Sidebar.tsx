@@ -11,6 +11,7 @@ import {
   ThemeIcon,
   MenuIcon,
   ChevronLeftIcon,
+  ClockIcon,
   type IconProps,
 } from "@/components/icons";
 
@@ -24,6 +25,7 @@ type NavItemIcon = React.ComponentType<IconProps>;
 const navItems: Array<{ href: string; label: string; Icon: NavItemIcon }> = [
   { href: "/dashboard", label: "Dashboard", Icon: DashboardIcon },
   { href: "/flyers", label: "Flyers", Icon: FlyersIcon },
+  { href: "/schedules", label: "Schedules", Icon: ClockIcon },
   { href: "/profile", label: "Profile", Icon: ProfileIcon },
 ];
 
