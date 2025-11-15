@@ -39,6 +39,7 @@ export function GeneratedImageCard({ image }: GeneratedImageCardProps) {
 
   const handleDownload = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!image.cloudfront_url) return;
     const link = document.createElement("a");
     link.href = image.cloudfront_url;
     link.download = `${image.image_type}_${image.id}.png`;
@@ -46,6 +47,11 @@ export function GeneratedImageCard({ image }: GeneratedImageCardProps) {
     link.click();
     document.body.removeChild(link);
   };
+
+  // Check if image is ready to display
+  const isImageReady = image.cloudfront_url && image.generation_status === "generated";
+  const isGenerating = image.generation_status === "requested" || image.generation_status === "generating";
+  const hasFailed = image.generation_status === "failed";
 
   return (
     <Card
@@ -69,9 +75,96 @@ export function GeneratedImageCard({ image }: GeneratedImageCardProps) {
           backgroundColor: tokens.bgHover,
         }}
       >
-        {!imageError ? (
+        {isGenerating ? (
+          // Show loader when image is being generated
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: tokens.bgHover,
+              gap: "12px",
+            }}
+          >
+            <div
+              style={{
+                width: "40px",
+                height: "40px",
+                border: `3px solid ${tokens.border}`,
+                borderTopColor: tokens.accent,
+                borderRadius: "50%",
+                animation: `spin-${image.id} 1s linear infinite`,
+              }}
+            >
+              <style>{`
+                @keyframes spin-${image.id} {
+                  from {
+                    transform: rotate(0deg);
+                  }
+                  to {
+                    transform: rotate(360deg);
+                  }
+                }
+              `}</style>
+            </div>
+            <p
+              style={{
+                margin: 0,
+                fontSize: "12px",
+                color: tokens.textSecondary,
+                fontWeight: 500,
+              }}
+            >
+              Generating...
+            </p>
+          </div>
+        ) : hasFailed ? (
+          // Show error state when generation failed
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: tokens.bgHover,
+              gap: "8px",
+              padding: "16px",
+            }}
+          >
+            <ImageIcon size={32} color={tokens.textMuted} strokeWidth="1.5" />
+            <p
+              style={{
+                margin: 0,
+                fontSize: "12px",
+                color: tokens.textMuted,
+                textAlign: "center",
+              }}
+            >
+              Generation failed
+            </p>
+            {image.generation_error && (
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: "11px",
+                  color: tokens.textMuted,
+                  textAlign: "center",
+                  opacity: 0.7,
+                }}
+              >
+                {image.generation_error}
+              </p>
+            )}
+          </div>
+        ) : isImageReady && !imageError ? (
+          // Show image when ready
           <img
-            src={image.cloudfront_url}
+            src={image.cloudfront_url!}
             alt={`Generated ${getImageTypeLabel(image.image_type)} image`}
             onError={() => setImageError(true)}
             loading="lazy"
@@ -82,6 +175,7 @@ export function GeneratedImageCard({ image }: GeneratedImageCardProps) {
             }}
           />
         ) : (
+          // Fallback: show placeholder if image failed to load or is not ready
           <div
             style={{
               width: "100%",
@@ -96,41 +190,42 @@ export function GeneratedImageCard({ image }: GeneratedImageCardProps) {
           </div>
         )}
         
-        {/* Download Button Overlay */}
-        <div
-          style={{
-            position: "absolute",
-            top: "12px",
-            right: "12px",
-            opacity: imageError ? 0 : 1,
-            transition: "opacity 0.2s ease",
-          }}
-        >
-          <button
-            onClick={handleDownload}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = tokens.bgHover;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = `${tokens.bgBase}e6`;
-            }}
+        {/* Download Button Overlay - Only show when image is ready */}
+        {isImageReady && !imageError && (
+          <div
             style={{
-              backgroundColor: `${tokens.bgBase}e6`,
-              backdropFilter: "blur(8px)",
-              borderRadius: "8px",
-              padding: "8px",
-              border: `1px solid ${tokens.border}`,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              transition: "background-color 0.2s ease",
+              position: "absolute",
+              top: "12px",
+              right: "12px",
+              transition: "opacity 0.2s ease",
             }}
-            aria-label={`Download ${getImageTypeLabel(image.image_type)} image`}
           >
-            <DownloadIcon size={18} color={tokens.textPrimary} />
-          </button>
-        </div>
+            <button
+              onClick={handleDownload}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = tokens.bgHover;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = `${tokens.bgBase}e6`;
+              }}
+              style={{
+                backgroundColor: `${tokens.bgBase}e6`,
+                backdropFilter: "blur(8px)",
+                borderRadius: "8px",
+                padding: "8px",
+                border: `1px solid ${tokens.border}`,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "background-color 0.2s ease",
+              }}
+              aria-label={`Download ${getImageTypeLabel(image.image_type)} image`}
+            >
+              <DownloadIcon size={18} color={tokens.textPrimary} />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Image Info */}
