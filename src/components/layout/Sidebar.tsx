@@ -12,6 +12,7 @@ import {
   MenuIcon,
   ChevronLeftIcon,
   ClockIcon,
+  SettingsIcon,
   type IconProps,
 } from "@/components/icons";
 
@@ -27,6 +28,7 @@ const navItems: Array<{ href: string; label: string; Icon: NavItemIcon }> = [
   { href: "/flyers", label: "Flyers", Icon: FlyersIcon },
   { href: "/schedules", label: "Schedules", Icon: ClockIcon },
   { href: "/profile", label: "Profile", Icon: ProfileIcon },
+  { href: "/settings", label: "Settings", Icon: SettingsIcon },
 ];
 
 const themeItem = {

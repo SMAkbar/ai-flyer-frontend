@@ -30,6 +30,7 @@ export { CubeIcon } from "./Cube";
 export { BriefcaseIcon } from "./Briefcase";
 export { MailIcon } from "./Mail";
 export { RefreshIcon } from "./Refresh";
+export { SettingsIcon } from "./Settings";
 
 export type { IconProps } from "./types";
 
