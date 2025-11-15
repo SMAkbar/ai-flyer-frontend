@@ -23,7 +23,7 @@ export function ScheduleList({ posts, onRefresh }: ScheduleListProps) {
     let filtered = posts;
     if (filterStatus !== "all") {
       filtered = posts.filter(
-        (post) => post.instagram_post_status === filterStatus
+        (post) => post.post_status === filterStatus
       );
     }
 
@@ -31,25 +31,25 @@ export function ScheduleList({ posts, onRefresh }: ScheduleListProps) {
     const sorted = [...filtered].sort((a, b) => {
       switch (sortOption) {
         case "scheduled_time_asc":
-          const aTime = a.instagram_scheduled_at
-            ? new Date(a.instagram_scheduled_at).getTime()
+          const aTime = a.scheduled_at
+            ? new Date(a.scheduled_at).getTime()
             : 0;
-          const bTime = b.instagram_scheduled_at
-            ? new Date(b.instagram_scheduled_at).getTime()
+          const bTime = b.scheduled_at
+            ? new Date(b.scheduled_at).getTime()
             : 0;
           return aTime - bTime;
 
         case "scheduled_time_desc":
-          const aTimeDesc = a.instagram_scheduled_at
-            ? new Date(a.instagram_scheduled_at).getTime()
+          const aTimeDesc = a.scheduled_at
+            ? new Date(a.scheduled_at).getTime()
             : 0;
-          const bTimeDesc = b.instagram_scheduled_at
-            ? new Date(b.instagram_scheduled_at).getTime()
+          const bTimeDesc = b.scheduled_at
+            ? new Date(b.scheduled_at).getTime()
             : 0;
           return bTimeDesc - aTimeDesc;
 
         case "status":
-          return a.instagram_post_status.localeCompare(b.instagram_post_status);
+          return a.post_status.localeCompare(b.post_status);
 
         case "flyer_title":
           return a.flyer_title.localeCompare(b.flyer_title);
@@ -167,7 +167,13 @@ export function ScheduleList({ posts, onRefresh }: ScheduleListProps) {
           description="Try adjusting your filter criteria to see more posts."
         />
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+            gap: "16px",
+          }}
+        >
           {filteredAndSortedPosts.map((post) => (
             <ScheduleItem key={post.id} post={post} onCancel={onRefresh} />
           ))}

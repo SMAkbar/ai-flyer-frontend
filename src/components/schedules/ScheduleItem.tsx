@@ -47,6 +47,11 @@ export function ScheduleItem({ post, onCancel }: ScheduleItemProps) {
       return;
     }
 
+    if (!post.flyer_id) {
+      alert("Cannot cancel post: flyer ID is missing");
+      return;
+    }
+
     setIsCanceling(true);
     try {
       const result = await instagramApi.cancelScheduledPost(
@@ -67,6 +72,10 @@ export function ScheduleItem({ post, onCancel }: ScheduleItemProps) {
   }
 
   function handleViewFlyer() {
+    if (!post.flyer_id) {
+      alert("Cannot view flyer: flyer ID is missing");
+      return;
+    }
     router.push(`/flyers/${post.flyer_id}`);
   }
 
@@ -79,27 +88,29 @@ export function ScheduleItem({ post, onCancel }: ScheduleItemProps) {
     }
   }
 
-  const scheduledDate = post.instagram_scheduled_at
-    ? new Date(post.instagram_scheduled_at)
+  const scheduledDate = post.scheduled_at
+    ? new Date(post.scheduled_at)
     : null;
-  const postedDate = post.instagram_posted_at
-    ? new Date(post.instagram_posted_at)
+  const postedDate = post.posted_at
+    ? new Date(post.posted_at)
     : null;
 
   const canCancel =
-    post.instagram_post_status === "scheduled" ||
-    post.instagram_post_status === "pending";
+    post.post_status === "scheduled" ||
+    post.post_status === "pending";
 
   return (
     <div
       style={{
         display: "flex",
-        gap: "16px",
+        flexDirection: "column",
+        gap: "12px",
         padding: "16px",
         border: `1px solid ${tokens.border}`,
         borderRadius: "8px",
         backgroundColor: tokens.bgElevated,
         transition: "all 0.2s ease",
+        height: "100%",
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.borderColor = tokens.accent;
@@ -113,8 +124,8 @@ export function ScheduleItem({ post, onCancel }: ScheduleItemProps) {
       {/* Image Preview */}
       <div
         style={{
-          width: "120px",
-          height: "120px",
+          width: "100%",
+          aspectRatio: "1",
           borderRadius: "8px",
           overflow: "hidden",
           flexShrink: 0,
@@ -133,14 +144,14 @@ export function ScheduleItem({ post, onCancel }: ScheduleItemProps) {
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "8px" }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "8px", minHeight: 0 }}>
         {/* Title and Status */}
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "flex-start",
-            gap: "16px",
+            gap: "12px",
           }}
         >
           <div>
@@ -169,22 +180,34 @@ export function ScheduleItem({ post, onCancel }: ScheduleItemProps) {
             style={{
               padding: "4px 12px",
               borderRadius: "12px",
-              backgroundColor: `${statusColors[post.instagram_post_status]}20`,
-              color: statusColors[post.instagram_post_status],
+              backgroundColor: `${statusColors[post.post_status]}20`,
+              color: statusColors[post.post_status],
               fontSize: "12px",
               fontWeight: 600,
               whiteSpace: "nowrap",
             }}
           >
-            {statusLabels[post.instagram_post_status] || post.instagram_post_status}
+            {statusLabels[post.post_status] || post.post_status}
           </div>
         </div>
 
         {/* Schedule Info */}
         <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
           {scheduledDate && (
-            <div style={{ fontSize: "14px", color: tokens.textSecondary }}>
-              📅 Scheduled: {scheduledDate.toLocaleString()}
+            <div
+              style={{
+                fontSize: "14px",
+                color: tokens.textPrimary,
+                fontWeight: 500,
+              }}
+            >
+              📅 Scheduled: {scheduledDate.toLocaleString(undefined, {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
             </div>
           )}
           {postedDate && (
@@ -192,7 +215,7 @@ export function ScheduleItem({ post, onCancel }: ScheduleItemProps) {
               ✅ Posted: {postedDate.toLocaleString()}
             </div>
           )}
-          {post.instagram_post_error && (
+          {post.post_error && (
             <div
               style={{
                 fontSize: "14px",
@@ -200,7 +223,7 @@ export function ScheduleItem({ post, onCancel }: ScheduleItemProps) {
                 marginTop: "4px",
               }}
             >
-              ⚠️ Error: {post.instagram_post_error}
+              ⚠️ Error: {post.post_error}
             </div>
           )}
         </div>
@@ -218,6 +241,7 @@ export function ScheduleItem({ post, onCancel }: ScheduleItemProps) {
             variant="secondary"
             size="small"
             onClick={handleViewFlyer}
+            disabled={!post.flyer_id}
           >
             View Flyer
           </Button>
@@ -231,7 +255,7 @@ export function ScheduleItem({ post, onCancel }: ScheduleItemProps) {
               {isCanceling ? "Canceling..." : "Cancel"}
             </Button>
           )}
-          {post.instagram_post_status === "posted" && post.instagram_post_id && (
+          {post.post_status === "posted" && post.instagram_post_id && (
             <Button
               variant="secondary"
               size="small"

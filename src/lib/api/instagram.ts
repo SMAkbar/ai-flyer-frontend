@@ -45,6 +45,7 @@ export type ScheduledPostsResponse = {
 };
 
 export type ScheduledPostWithFlyerRead = InstagramPostRead & {
+  flyer_id: number | null;
   flyer_title: string;
   image_type: string;
   cloudfront_url: string | null;
