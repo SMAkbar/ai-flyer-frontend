@@ -20,7 +20,7 @@ export function ScheduleItem({ post, onCancel }: ScheduleItemProps) {
     scheduled: tokens.success,
     posting: tokens.warning,
     posted: tokens.success,
-    failed: tokens.error,
+    failed: tokens.danger,
     pending: tokens.textSecondary,
   };
 
@@ -129,18 +129,35 @@ export function ScheduleItem({ post, onCancel }: ScheduleItemProps) {
           borderRadius: "8px",
           overflow: "hidden",
           flexShrink: 0,
-          backgroundColor: tokens.bgSecondary,
+          backgroundColor: tokens.bgHover,
         }}
       >
-        <img
-          src={post.cloudfront_url}
-          alt={imageTypeLabels[post.image_type] || post.image_type}
+        {post.cloudfront_url ? (
+          <img
+            src={post.cloudfront_url}
+            alt={imageTypeLabels[post.image_type] || post.image_type}
           style={{
             width: "100%",
             height: "100%",
             objectFit: "cover",
           }}
-        />
+          />
+        ) : (
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: tokens.bgHover,
+              color: tokens.textMuted,
+              fontSize: "12px",
+            }}
+          >
+            No image
+          </div>
+        )}
       </div>
 
       {/* Content */}
@@ -219,7 +236,7 @@ export function ScheduleItem({ post, onCancel }: ScheduleItemProps) {
             <div
               style={{
                 fontSize: "14px",
-                color: tokens.error,
+                color: tokens.danger,
                 marginTop: "4px",
               }}
             >
@@ -239,7 +256,6 @@ export function ScheduleItem({ post, onCancel }: ScheduleItemProps) {
         >
           <Button
             variant="secondary"
-            size="small"
             onClick={handleViewFlyer}
             disabled={!post.flyer_id}
           >
@@ -248,7 +264,6 @@ export function ScheduleItem({ post, onCancel }: ScheduleItemProps) {
           {canCancel && (
             <Button
               variant="secondary"
-              size="small"
               onClick={handleCancel}
               disabled={isCanceling}
             >
@@ -258,7 +273,6 @@ export function ScheduleItem({ post, onCancel }: ScheduleItemProps) {
           {post.post_status === "posted" && post.instagram_post_id && (
             <Button
               variant="secondary"
-              size="small"
               onClick={handleViewInstagram}
             >
               <span

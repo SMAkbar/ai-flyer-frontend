@@ -55,7 +55,7 @@ export function ImageSelectionCard({
           backgroundColor: tokens.bgHover,
         }}
       >
-        {!imageError ? (
+        {!imageError && image.cloudfront_url ? (
           <img
             src={image.cloudfront_url}
             alt={`Generated ${image.image_type} image`}

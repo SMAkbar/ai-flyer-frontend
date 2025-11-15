@@ -5,10 +5,10 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { tokens } from "@/components/theme/tokens";
 import { PostStatusBadge } from "./PostStatusBadge";
-import type { ScheduledPostRead } from "@/lib/api/instagram";
+import type { ScheduledPostWithFlyerRead } from "@/lib/api/instagram";
 
 type ScheduledPostsCardProps = {
-  posts: ScheduledPostRead[];
+  posts: ScheduledPostWithFlyerRead[];
   onCancelPost: (imageId: number) => void;
   isCanceling?: number | null;
 };
@@ -98,15 +98,32 @@ export function ScheduledPostsCard({
                 flexShrink: 0,
               }}
             >
-              <img
-                src={post.cloudfront_url}
-                alt={getImageTypeLabel(post.image_type)}
+              {post.cloudfront_url ? (
+                <img
+                  src={post.cloudfront_url}
+                  alt={getImageTypeLabel(post.image_type)}
                 style={{
                   width: "100%",
                   height: "100%",
                   objectFit: "cover",
                 }}
-              />
+                />
+              ) : (
+                <div
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: tokens.bgElevated,
+                  }}
+                >
+                  <span style={{ color: tokens.textMuted, fontSize: "12px" }}>
+                    No image
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Post Info */}

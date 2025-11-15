@@ -5,7 +5,7 @@ import { Alert } from "@/components/ui/Alert";
 import { ImageCategorySection } from "./ImageCategorySection";
 import { PostingOptionsCard } from "./PostingOptionsCard";
 import { ScheduledPostsCard } from "./ScheduledPostsCard";
-import { instagramApi, type ScheduledPostRead } from "@/lib/api/instagram";
+import { instagramApi, type ScheduledPostWithFlyerRead } from "@/lib/api/instagram";
 import { flyersApi, type FlyerDetailRead } from "@/lib/api/flyers";
 import { tokens } from "@/components/theme/tokens";
 import type { GeneratedImageType } from "@/lib/api/flyers";
@@ -43,7 +43,7 @@ export function InstagramSchedulingPage({
   );
 
   // State for scheduled posts
-  const [scheduledPosts, setScheduledPosts] = useState<ScheduledPostRead[]>([]);
+  const [scheduledPosts, setScheduledPosts] = useState<ScheduledPostWithFlyerRead[]>([]);
 
   // State for tracking which images have been posted
   const [postedImageIds, setPostedImageIds] = useState<Set<number>>(new Set());
