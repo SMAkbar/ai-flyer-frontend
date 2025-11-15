@@ -103,14 +103,55 @@ export function InstagramSchedulingPage({
         const postedIds = new Set<number>();
         const postedCats = new Set<GeneratedImageType>();
 
+        // Use flyer.generated_images directly (generatedImages is defined later)
+        const generatedImages = flyer.generated_images || [];
+
+        // Restore selected images and scheduled times from existing posts
         result.data.scheduled_posts.forEach((post) => {
-          if (post.is_selected_for_posting) {
+          // Include posts that are selected for posting OR already posted
+          if (post.is_selected_for_posting || post.post_status === "posted") {
             postedIds.add(post.flyer_generated_image_id);
             
             // Find the image in generatedImages to get its type
             const image = generatedImages.find(img => img.id === post.flyer_generated_image_id);
             if (image) {
               postedCats.add(image.image_type);
+              
+              // Restore selected image ID for this category
+              if (post.is_selected_for_posting && post.post_status !== "posted") {
+                switch (image.image_type) {
+                  case "time_date":
+                    setSelectedTimeDateImageId(post.flyer_generated_image_id);
+                    // Restore scheduled time if it exists
+                    if (post.scheduled_at) {
+                      setTimeDateScheduledAt(post.scheduled_at);
+                      setTimeDatePostingMode("schedule");
+                    }
+                    break;
+                  case "performers":
+                    setSelectedPerformersImageId(post.flyer_generated_image_id);
+                    if (post.scheduled_at) {
+                      setPerformersScheduledAt(post.scheduled_at);
+                      setPerformersPostingMode("schedule");
+                    }
+                    break;
+                  case "location":
+                    setSelectedLocationImageId(post.flyer_generated_image_id);
+                    if (post.scheduled_at) {
+                      setLocationScheduledAt(post.scheduled_at);
+                      setLocationPostingMode("schedule");
+                    }
+                    break;
+                }
+                
+                // Restore caption and hashtags from the first scheduled post (they're shared)
+                if (post.caption) {
+                  setCaption(post.caption);
+                }
+                if (post.hashtags) {
+                  setHashtags(post.hashtags);
+                }
+              }
             }
           }
         });
@@ -142,16 +183,72 @@ export function InstagramSchedulingPage({
   }
 
   async function handleSubmit() {
-    // Validate at least one image is selected
-    const selectedImages = [
+    // Get all currently selected images from state (including already scheduled ones)
+    // We need to include images that are already selected in the UI, even if they're already scheduled
+    const currentlySelectedInUI = [
       selectedTimeDateImageId,
       selectedPerformersImageId,
       selectedLocationImageId,
     ].filter((id): id is number => id !== null);
 
-    if (selectedImages.length === 0) {
+    // Also get already scheduled images that aren't in UI state (from existing posts)
+    const generatedImages = flyer.generated_images || [];
+    const alreadyScheduledImageIds = new Set<number>();
+    scheduledPosts.forEach((post) => {
+      if (post.is_selected_for_posting && post.post_status !== "posted") {
+        alreadyScheduledImageIds.add(post.flyer_generated_image_id);
+      }
+    });
+
+    // Combine UI selections with already scheduled (to preserve them)
+    const allSelectedImageIds = new Set([
+      ...currentlySelectedInUI,
+      ...Array.from(alreadyScheduledImageIds),
+    ]);
+
+    if (allSelectedImageIds.size === 0) {
       setError("Please select at least one image to post");
       return;
+    }
+
+    // Determine which images to select based on UI state
+    // For categories with UI selections, use those; for others, keep existing if scheduled
+    let timeDateToSelect = selectedTimeDateImageId;
+    let performersToSelect = selectedPerformersImageId;
+    let locationToSelect = selectedLocationImageId;
+
+    // If a category doesn't have a UI selection but has a scheduled post, keep it
+    if (!timeDateToSelect) {
+      const scheduledTimeDate = scheduledPosts.find((post) => {
+        if (!post.is_selected_for_posting || post.post_status === "posted") return false;
+        const image = generatedImages.find((img) => img.id === post.flyer_generated_image_id);
+        return image?.image_type === "time_date";
+      });
+      if (scheduledTimeDate) {
+        timeDateToSelect = scheduledTimeDate.flyer_generated_image_id;
+      }
+    }
+
+    if (!performersToSelect) {
+      const scheduledPerformers = scheduledPosts.find((post) => {
+        if (!post.is_selected_for_posting || post.post_status === "posted") return false;
+        const image = generatedImages.find((img) => img.id === post.flyer_generated_image_id);
+        return image?.image_type === "performers";
+      });
+      if (scheduledPerformers) {
+        performersToSelect = scheduledPerformers.flyer_generated_image_id;
+      }
+    }
+
+    if (!locationToSelect) {
+      const scheduledLocation = scheduledPosts.find((post) => {
+        if (!post.is_selected_for_posting || post.post_status === "posted") return false;
+        const image = generatedImages.find((img) => img.id === post.flyer_generated_image_id);
+        return image?.image_type === "location";
+      });
+      if (scheduledLocation) {
+        locationToSelect = scheduledLocation.flyer_generated_image_id;
+      }
     }
 
     // Validate caption length
@@ -160,7 +257,7 @@ export function InstagramSchedulingPage({
       return;
     }
 
-    // Validate scheduled times if scheduling
+    // Validate scheduled times if scheduling (only for newly selected images in UI)
     if (selectedTimeDateImageId && timeDatePostingMode === "schedule") {
       const scheduledDate = new Date(timeDateScheduledAt);
       if (scheduledDate <= new Date()) {
@@ -188,11 +285,11 @@ export function InstagramSchedulingPage({
     setSuccess(null);
 
     try {
-      // First, select images
+      // First, select images (this will preserve existing selections)
       const selectResult = await instagramApi.selectImages(flyer.id, {
-        time_date_image_id: selectedTimeDateImageId,
-        performers_image_id: selectedPerformersImageId,
-        location_image_id: selectedLocationImageId,
+        time_date_image_id: timeDateToSelect,
+        performers_image_id: performersToSelect,
+        location_image_id: locationToSelect,
       });
 
       if (!selectResult.ok) {
@@ -200,31 +297,50 @@ export function InstagramSchedulingPage({
         return;
       }
 
-      // Then, schedule each selected image with its own schedule time
-      const schedulePromises = selectResult.data.selected_images.map((image) => {
-        // Determine the schedule time based on image type
-        let scheduledDateTime: string;
-        if (image.image_type === "time_date") {
-          scheduledDateTime = timeDatePostingMode === "now" 
-            ? new Date().toISOString()
-            : timeDateScheduledAt;
-        } else if (image.image_type === "performers") {
-          scheduledDateTime = performersPostingMode === "now" 
-            ? new Date().toISOString()
-            : performersScheduledAt;
-        } else { // location
-          scheduledDateTime = locationPostingMode === "now" 
-            ? new Date().toISOString()
-            : locationScheduledAt;
-        }
+      // Then, schedule only the images that are newly selected in the UI
+      // Don't re-schedule images that are already scheduled
+      const schedulePromises = selectResult.data.selected_images
+        .filter((post) => {
+          // Only schedule if this image is in the UI selection (newly selected)
+          return currentlySelectedInUI.includes(post.flyer_generated_image_id);
+        })
+        .map((post) => {
+          // Find the image to get its type
+          const image = generatedImages.find((img) => img.id === post.flyer_generated_image_id);
+          if (!image) {
+            throw new Error(`Image ${post.flyer_generated_image_id} not found`);
+          }
 
-        return instagramApi.schedulePost(flyer.id, {
-          image_id: image.id,
-          scheduled_at: scheduledDateTime,
-          caption: caption || null,
-          hashtags: hashtags || null,
+          // Determine the schedule time based on image type
+          let scheduledDateTime: string;
+          if (image.image_type === "time_date") {
+            scheduledDateTime = timeDatePostingMode === "now" 
+              ? new Date().toISOString()
+              : timeDateScheduledAt;
+          } else if (image.image_type === "performers") {
+            scheduledDateTime = performersPostingMode === "now" 
+              ? new Date().toISOString()
+              : performersScheduledAt;
+          } else { // location
+            scheduledDateTime = locationPostingMode === "now" 
+              ? new Date().toISOString()
+              : locationScheduledAt;
+          }
+
+          return instagramApi.schedulePost(flyer.id, {
+            image_id: post.flyer_generated_image_id,
+            scheduled_at: scheduledDateTime,
+            caption: caption || null,
+            hashtags: hashtags || null,
+          });
         });
-      });
+
+      // If there are no new images to schedule, just update the selection
+      if (schedulePromises.length === 0) {
+        setSuccess("Images selected successfully!");
+        await loadScheduledPosts();
+        return;
+      }
 
       const scheduleResults = await Promise.all(schedulePromises);
 
@@ -238,19 +354,30 @@ export function InstagramSchedulingPage({
         const newPostedCats = new Set(postedCategories);
         let postedCategory: GeneratedImageType | null = null;
 
-        selectResult.data.selected_images.forEach((image) => {
-          newPostedIds.add(image.id);
-          newPostedCats.add(image.image_type);
-          postedCategory = image.image_type; // Track the most recent one
-        });
+        selectResult.data.selected_images
+          .filter((post) => currentlySelectedInUI.includes(post.flyer_generated_image_id))
+          .forEach((post) => {
+            newPostedIds.add(post.flyer_generated_image_id);
+            const img = generatedImages.find((img) => img.id === post.flyer_generated_image_id);
+            if (img) {
+              newPostedCats.add(img.image_type);
+              postedCategory = img.image_type; // Track the most recent one
+            }
+          });
 
         setPostedImageIds(newPostedIds);
         setPostedCategories(newPostedCats);
         setRecentlyPostedCategory(postedCategory);
 
         // Determine success message based on posting modes
+        const newlyScheduledPosts = selectResult.data.selected_images.filter((post) =>
+          currentlySelectedInUI.includes(post.flyer_generated_image_id)
+        );
+        
         const allNow = scheduleResults.every((result, index) => {
-          const image = selectResult.data.selected_images[index];
+          const post = newlyScheduledPosts[index];
+          const image = generatedImages.find((img) => img.id === post.flyer_generated_image_id);
+          if (!image) return false;
           if (image.image_type === "time_date") return timeDatePostingMode === "now";
           if (image.image_type === "performers") return performersPostingMode === "now";
           return locationPostingMode === "now";
@@ -261,7 +388,9 @@ export function InstagramSchedulingPage({
         } else {
           const scheduledTimes = scheduleResults
             .map((result, index) => {
-              const image = selectResult.data.selected_images[index];
+              const post = newlyScheduledPosts[index];
+              const image = generatedImages.find((img) => img.id === post.flyer_generated_image_id);
+              if (!image) return null;
               if (image.image_type === "time_date") {
                 return timeDatePostingMode === "schedule" ? timeDateScheduledAt : null;
               }

@@ -41,7 +41,7 @@ export type SchedulePostResponse = ScheduledPostRead;
 
 export type ScheduledPostsResponse = {
   flyer_id: number;
-  scheduled_posts: ScheduledPostRead[];
+  scheduled_posts: ScheduledPostWithFlyerRead[];
 };
 
 export type ScheduledPostWithFlyerRead = InstagramPostRead & {

@@ -134,10 +134,10 @@ export function ScheduledPostsCard({
                 >
                   {getImageTypeLabel(post.image_type)}
                 </h3>
-                <PostStatusBadge status={post.instagram_post_status} />
+                <PostStatusBadge status={post.post_status} />
               </div>
 
-              {post.instagram_scheduled_at && (
+              {post.scheduled_at && (
                 <p
                   style={{
                     margin: 0,
@@ -146,11 +146,11 @@ export function ScheduledPostsCard({
                     marginBottom: "4px",
                   }}
                 >
-                  Scheduled: {formatDate(post.instagram_scheduled_at)}
+                  Scheduled: {formatDate(post.scheduled_at)}
                 </p>
               )}
 
-              {post.instagram_posted_at && (
+              {post.posted_at && (
                 <p
                   style={{
                     margin: 0,
@@ -158,11 +158,11 @@ export function ScheduledPostsCard({
                     color: tokens.textSecondary,
                   }}
                 >
-                  Posted: {formatDate(post.instagram_posted_at)}
+                  Posted: {formatDate(post.posted_at)}
                 </p>
               )}
 
-              {post.instagram_post_error && (
+              {post.post_error && (
                 <p
                   style={{
                     margin: 0,
@@ -171,14 +171,14 @@ export function ScheduledPostsCard({
                     marginTop: "4px",
                   }}
                 >
-                  Error: {post.instagram_post_error}
+                  Error: {post.post_error}
                 </p>
               )}
             </div>
 
             {/* Cancel Button */}
-            {post.instagram_post_status === "scheduled" &&
-              !post.instagram_posted_at && (
+            {post.post_status === "scheduled" &&
+              !post.posted_at && (
                 <Button
                   variant="secondary"
                   onClick={() => onCancelPost(post.id)}
