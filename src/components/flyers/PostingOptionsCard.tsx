@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
+import { DateTimePicker } from "@/components/ui/DateTimePicker";
 import { tokens } from "@/components/theme/tokens";
 
 type PostingMode = "now" | "schedule";
@@ -42,18 +43,8 @@ export function PostingOptionsCard({
     onPostingModeChange(mode);
   };
 
-  // Convert ISO datetime to datetime-local format
-  const datetimeLocalValue = scheduledAt
-    ? new Date(scheduledAt).toISOString().slice(0, 16)
-    : "";
-
-  const handleDatetimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    if (value) {
-      const date = new Date(value);
-      onScheduledAtChange(date.toISOString());
-    }
-  };
+  // Generate unique name for radio buttons based on category
+  const radioGroupName = `postingMode-${categoryLabel || "default"}`;
 
   const captionLength = caption.length;
   const maxCaptionLength = 2200;
@@ -169,7 +160,7 @@ export function PostingOptionsCard({
           >
             <input
               type="radio"
-              name="postingMode"
+              name={radioGroupName}
               value="now"
               checked={postingMode === "now"}
               onChange={() => handleModeChange("now")}
@@ -202,7 +193,7 @@ export function PostingOptionsCard({
           >
             <input
               type="radio"
-              name="postingMode"
+              name={radioGroupName}
               value="schedule"
               checked={postingMode === "schedule"}
               onChange={() => handleModeChange("schedule")}
@@ -239,12 +230,11 @@ export function PostingOptionsCard({
             >
               Scheduled Date & Time
             </label>
-            <Input
-              type="datetime-local"
-              value={datetimeLocalValue}
-              onChange={handleDatetimeChange}
+            <DateTimePicker
+              value={scheduledAt}
+              onChange={onScheduledAtChange}
               disabled={disabled || isSubmitting}
-              min={new Date().toISOString().slice(0, 16)} // Prevent past dates
+              min={new Date().toISOString()} // Prevent past dates
             />
           </div>
         )}

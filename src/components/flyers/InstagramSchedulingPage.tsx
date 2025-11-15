@@ -45,6 +45,11 @@ export function InstagramSchedulingPage({
   // State for scheduled posts
   const [scheduledPosts, setScheduledPosts] = useState<ScheduledPostRead[]>([]);
 
+  // State for tracking which images have been posted
+  const [postedImageIds, setPostedImageIds] = useState<Set<number>>(new Set());
+  const [postedCategories, setPostedCategories] = useState<Set<GeneratedImageType>>(new Set());
+  const [recentlyPostedCategory, setRecentlyPostedCategory] = useState<GeneratedImageType | null>(null);
+
   // UI state
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -94,22 +99,24 @@ export function InstagramSchedulingPage({
       if (result.ok) {
         setScheduledPosts(result.data.scheduled_posts);
 
-        // Pre-select images that are already scheduled
+        // Track posted images and categories
+        const postedIds = new Set<number>();
+        const postedCats = new Set<GeneratedImageType>();
+
         result.data.scheduled_posts.forEach((post) => {
           if (post.is_selected_for_posting) {
-            switch (post.image_type) {
-              case "time_date":
-                setSelectedTimeDateImageId(post.id);
-                break;
-              case "performers":
-                setSelectedPerformersImageId(post.id);
-                break;
-              case "location":
-                setSelectedLocationImageId(post.id);
-                break;
+            postedIds.add(post.flyer_generated_image_id);
+            
+            // Find the image in generatedImages to get its type
+            const image = generatedImages.find(img => img.id === post.flyer_generated_image_id);
+            if (image) {
+              postedCats.add(image.image_type);
             }
           }
         });
+
+        setPostedImageIds(postedIds);
+        setPostedCategories(postedCats);
       } else {
         setError(result.error.message || "Failed to load scheduled posts");
       }
@@ -226,6 +233,21 @@ export function InstagramSchedulingPage({
         const errorMessage = scheduleResults.find((r) => !r.ok)?.error.message;
         setError(errorMessage || "Failed to schedule some posts");
       } else {
+        // Track which images were just posted
+        const newPostedIds = new Set(postedImageIds);
+        const newPostedCats = new Set(postedCategories);
+        let postedCategory: GeneratedImageType | null = null;
+
+        selectResult.data.selected_images.forEach((image) => {
+          newPostedIds.add(image.id);
+          newPostedCats.add(image.image_type);
+          postedCategory = image.image_type; // Track the most recent one
+        });
+
+        setPostedImageIds(newPostedIds);
+        setPostedCategories(newPostedCats);
+        setRecentlyPostedCategory(postedCategory);
+
         // Determine success message based on posting modes
         const allNow = scheduleResults.every((result, index) => {
           const image = selectResult.data.selected_images[index];
@@ -343,8 +365,10 @@ export function InstagramSchedulingPage({
         selectedImageId={selectedTimeDateImageId}
         onSelectImage={(id) => handleSelectImage("time_date", id)}
         disabled={isSubmitting}
+        postedImageIds={postedImageIds}
+        isPosted={postedCategories.has("time_date")}
       />
-      {selectedTimeDateImageId && (
+      {selectedTimeDateImageId && !postedCategories.has("time_date") && (
         <PostingOptionsCard
           caption={caption}
           hashtags={hashtags}
@@ -368,8 +392,10 @@ export function InstagramSchedulingPage({
         selectedImageId={selectedPerformersImageId}
         onSelectImage={(id) => handleSelectImage("performers", id)}
         disabled={isSubmitting}
+        postedImageIds={postedImageIds}
+        isPosted={postedCategories.has("performers")}
       />
-      {selectedPerformersImageId && (
+      {selectedPerformersImageId && !postedCategories.has("performers") && (
         <PostingOptionsCard
           caption={caption}
           hashtags={hashtags}
@@ -393,8 +419,10 @@ export function InstagramSchedulingPage({
         selectedImageId={selectedLocationImageId}
         onSelectImage={(id) => handleSelectImage("location", id)}
         disabled={isSubmitting}
+        postedImageIds={postedImageIds}
+        isPosted={postedCategories.has("location")}
       />
-      {selectedLocationImageId && (
+      {selectedLocationImageId && !postedCategories.has("location") && (
         <PostingOptionsCard
           caption={caption}
           hashtags={hashtags}

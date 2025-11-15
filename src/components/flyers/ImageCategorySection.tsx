@@ -4,6 +4,7 @@ import React from "react";
 import { Card } from "@/components/ui/Card";
 import { tokens } from "@/components/theme/tokens";
 import { ImageSelectionCard } from "./ImageSelectionCard";
+import { CheckIcon } from "@/components/icons";
 import type { FlyerGeneratedImage, GeneratedImageType } from "@/lib/api/flyers";
 
 type ImageCategorySectionProps = {
@@ -13,6 +14,8 @@ type ImageCategorySectionProps = {
   selectedImageId: number | null;
   onSelectImage: (imageId: number) => void;
   disabled?: boolean;
+  postedImageIds?: Set<number>; // Set of image IDs that have been posted
+  isPosted?: boolean; // Whether any image in this category has been posted
 };
 
 export function ImageCategorySection({
@@ -22,6 +25,8 @@ export function ImageCategorySection({
   selectedImageId,
   onSelectImage,
   disabled = false,
+  postedImageIds = new Set(),
+  isPosted = false,
 }: ImageCategorySectionProps) {
   // Filter and sort images by creation date (newest first)
   const categoryImages = images
@@ -77,15 +82,42 @@ export function ImageCategorySection({
           {categoryImages.length} {categoryImages.length === 1 ? "option" : "options"}
         </div>
       </div>
-      <p
-        style={{
-          fontSize: "14px",
-          color: tokens.textSecondary,
-          marginBottom: "20px",
-        }}
-      >
-        Select one image from this category to post on Instagram
-      </p>
+      {isPosted ? (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            marginBottom: "20px",
+            padding: "12px",
+            backgroundColor: "#d1fae5", // green-100
+            borderRadius: "8px",
+            border: `1px solid #10b981`, // green-500
+          }}
+        >
+          <CheckIcon size={16} color="#10b981" strokeWidth="3" />
+          <p
+            style={{
+              fontSize: "14px",
+              color: "#065f46", // green-800
+              margin: 0,
+              fontWeight: 500,
+            }}
+          >
+            Already posted an image for {categoryLabel}
+          </p>
+        </div>
+      ) : (
+        <p
+          style={{
+            fontSize: "14px",
+            color: tokens.textSecondary,
+            marginBottom: "20px",
+          }}
+        >
+          Select one image from this category to post on Instagram
+        </p>
+      )}
       <div
         style={{
           display: "grid",
@@ -100,6 +132,7 @@ export function ImageCategorySection({
             isSelected={selectedImageId === image.id}
             onSelect={() => !disabled && onSelectImage(image.id)}
             disabled={disabled}
+            isPosted={postedImageIds.has(image.id)}
           />
         ))}
       </div>

@@ -1,10 +1,10 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, forwardRef } from 'react';
 import { tokens } from '../theme/tokens';
 
 export type InputProps = React.InputHTMLAttributes<HTMLInputElement>;
 
-export function Input(props: InputProps) {
+export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(props, ref) {
   const [isFocused, setIsFocused] = useState(false);
 
   const baseStyle: React.CSSProperties = {
@@ -34,6 +34,7 @@ export function Input(props: InputProps) {
   return (
     <input
       {...props}
+      ref={ref}
       style={{ ...baseStyle, ...focusedStyle, ...props.style }}
       onFocus={(e) => {
         setIsFocused(true);
@@ -46,4 +47,4 @@ export function Input(props: InputProps) {
       placeholder={props.placeholder ? props.placeholder : undefined}
     />
   );
-}
+});

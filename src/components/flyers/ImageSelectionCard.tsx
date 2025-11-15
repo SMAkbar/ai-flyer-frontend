@@ -11,6 +11,7 @@ type ImageSelectionCardProps = {
   isSelected: boolean;
   onSelect: () => void;
   disabled?: boolean;
+  isPosted?: boolean; // Whether this image has been posted
 };
 
 export function ImageSelectionCard({
@@ -18,15 +19,23 @@ export function ImageSelectionCard({
   isSelected,
   onSelect,
   disabled = false,
+  isPosted = false,
 }: ImageSelectionCardProps) {
   const [imageError, setImageError] = useState(false);
+
+  // Determine border color: posted (green) > selected (accent) > default
+  const borderColor = isPosted 
+    ? "#10b981" // green-500
+    : isSelected 
+    ? tokens.accent 
+    : tokens.border;
 
   return (
     <Card
       onClick={disabled ? undefined : onSelect}
       style={{
         backgroundColor: tokens.bgElevated,
-        border: `2px solid ${isSelected ? tokens.accent : tokens.border}`,
+        border: `2px solid ${borderColor}`,
         borderRadius: "12px",
         padding: 0,
         overflow: "hidden",
@@ -74,7 +83,7 @@ export function ImageSelectionCard({
         )}
 
         {/* Selection Indicator */}
-        {isSelected && (
+        {isSelected && !isPosted && (
           <div
             style={{
               position: "absolute",
@@ -84,6 +93,27 @@ export function ImageSelectionCard({
               height: "24px",
               borderRadius: "50%",
               backgroundColor: tokens.accent,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              border: `2px solid ${tokens.bgBase}`,
+            }}
+          >
+            <CheckIcon size={14} color={tokens.textPrimary} strokeWidth="3" />
+          </div>
+        )}
+
+        {/* Posted Indicator */}
+        {isPosted && (
+          <div
+            style={{
+              position: "absolute",
+              top: "8px",
+              right: "8px",
+              width: "24px",
+              height: "24px",
+              borderRadius: "50%",
+              backgroundColor: "#10b981", // green-500
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
