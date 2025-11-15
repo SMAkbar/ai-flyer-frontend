@@ -5,17 +5,15 @@ export type UserMetaSettings = {
   user_id: number;
   meta_app_id: string;
   meta_app_secret: string;
-  meta_access_token: string;
+  meta_access_token: string | null;
   instagram_user_id: string;
-  instagram_username: string | null;
 };
 
 export type UserMetaSettingsUpdate = {
   meta_app_id: string;
   meta_app_secret: string;
-  meta_access_token: string;
+  meta_access_token?: string | null;
   instagram_user_id: string;
-  instagram_username?: string | null;
 };
 
 export const settingsApi = {

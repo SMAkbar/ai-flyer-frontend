@@ -16,9 +16,7 @@ export default function SettingsPage() {
   const [formData, setFormData] = useState<UserMetaSettingsUpdate>({
     meta_app_id: "",
     meta_app_secret: "",
-    meta_access_token: "",
     instagram_user_id: "",
-    instagram_username: "",
   });
 
   useEffect(() => {
@@ -45,9 +43,7 @@ export default function SettingsPage() {
     setFormData({
       meta_app_id: res.data.meta_app_id,
       meta_app_secret: res.data.meta_app_secret,
-      meta_access_token: res.data.meta_access_token,
       instagram_user_id: res.data.instagram_user_id,
-      instagram_username: res.data.instagram_username || "",
     });
   }
 
@@ -255,7 +251,7 @@ export default function SettingsPage() {
             marginBottom: "24px",
           }}
         >
-          Configure your Meta App credentials and Instagram Business Account ID. These credentials are encrypted and stored securely.
+          Configure your Meta App credentials and Instagram Business Account ID. These credentials are encrypted and stored securely. Set the required fields first, then add your Meta Access Token.
         </p>
 
         <form onSubmit={handleSave}>
@@ -334,40 +330,53 @@ export default function SettingsPage() {
               />
             </div>
 
-            <div>
-              <label
-                htmlFor="meta_access_token"
-                style={{
-                  display: "block",
-                  fontSize: "14px",
-                  fontWeight: 500,
-                  color: tokens.textPrimary,
-                  marginBottom: "8px",
-                }}
-              >
-                Meta Access Token <span style={{ color: tokens.danger }}>*</span>
-              </label>
-              <textarea
-                id="meta_access_token"
-                name="meta_access_token"
-                value={formData.meta_access_token}
-                onChange={handleChange}
-                required
-                rows={3}
-                style={{
-                  width: "100%",
-                  padding: "12px",
-                  fontSize: "14px",
-                  color: tokens.textPrimary,
-                  backgroundColor: tokens.bgBase,
-                  border: `1px solid ${tokens.border}`,
-                  borderRadius: "8px",
-                  fontFamily: "monospace",
-                  resize: "vertical",
-                }}
-                placeholder="Enter your Meta Access Token (long-lived token recommended)"
-              />
-            </div>
+            {/* Display Meta Access Token (read-only) */}
+            {settings?.meta_access_token && (
+              <div>
+                <label
+                  htmlFor="meta_access_token_display"
+                  style={{
+                    display: "block",
+                    fontSize: "14px",
+                    fontWeight: 500,
+                    color: tokens.textPrimary,
+                    marginBottom: "8px",
+                  }}
+                >
+                  Meta Access Token
+                </label>
+                <textarea
+                  id="meta_access_token_display"
+                  value={settings.meta_access_token}
+                  readOnly
+                  rows={3}
+                  style={{
+                    width: "100%",
+                    padding: "12px",
+                    fontSize: "14px",
+                    color: tokens.textSecondary,
+                    backgroundColor: tokens.bgBase,
+                    border: `1px solid ${tokens.border}`,
+                    borderRadius: "8px",
+                    fontFamily: "monospace",
+                    resize: "vertical",
+                    cursor: "not-allowed",
+                    opacity: 0.8,
+                  }}
+                  placeholder="Access token will appear here once configured"
+                />
+                <p
+                  style={{
+                    fontSize: "12px",
+                    color: tokens.textSecondary,
+                    marginTop: "4px",
+                    marginBottom: 0,
+                  }}
+                >
+                  Access token is stored securely. To update it, contact support or use the Meta API.
+                </p>
+              </div>
+            )}
 
             <div>
               <label
@@ -403,38 +412,6 @@ export default function SettingsPage() {
               />
             </div>
 
-            <div>
-              <label
-                htmlFor="instagram_username"
-                style={{
-                  display: "block",
-                  fontSize: "14px",
-                  fontWeight: 500,
-                  color: tokens.textPrimary,
-                  marginBottom: "8px",
-                }}
-              >
-                Instagram Username (Optional)
-              </label>
-              <input
-                type="text"
-                id="instagram_username"
-                name="instagram_username"
-                value={formData.instagram_username || ""}
-                onChange={handleChange}
-                style={{
-                  width: "100%",
-                  padding: "12px",
-                  fontSize: "14px",
-                  color: tokens.textPrimary,
-                  backgroundColor: tokens.bgBase,
-                  border: `1px solid ${tokens.border}`,
-                  borderRadius: "8px",
-                  fontFamily: "inherit",
-                }}
-                placeholder="e.g., @smakbar42"
-              />
-            </div>
           </div>
 
           <div
