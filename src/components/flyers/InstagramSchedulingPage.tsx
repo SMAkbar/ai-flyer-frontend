@@ -162,7 +162,8 @@ export function InstagramSchedulingPage({
         setError(result.error.message || "Failed to load scheduled posts");
       }
     } catch (err) {
-      setError("An unexpected error occurred");
+      console.error("Error loading scheduled posts:", err);
+      setError(err instanceof Error ? err.message : "An unexpected error occurred");
     } finally {
       setIsLoading(false);
     }
@@ -299,7 +300,7 @@ export function InstagramSchedulingPage({
 
       // Then, schedule only the images that are newly selected in the UI
       // Don't re-schedule images that are already scheduled
-      const schedulePromises = selectResult.data.selected_images
+      const schedulePromises = selectResult.data.selected_posts
         .filter((post) => {
           // Only schedule if this image is in the UI selection (newly selected)
           return currentlySelectedInUI.includes(post.flyer_generated_image_id);
@@ -338,7 +339,12 @@ export function InstagramSchedulingPage({
       // If there are no new images to schedule, just update the selection
       if (schedulePromises.length === 0) {
         setSuccess("Images selected successfully!");
-        await loadScheduledPosts();
+        try {
+          await loadScheduledPosts();
+        } catch (err) {
+          console.error("Error reloading scheduled posts:", err);
+          // Don't show error to user since selection was successful
+        }
         return;
       }
 
@@ -346,15 +352,17 @@ export function InstagramSchedulingPage({
 
       const hasError = scheduleResults.some((result) => !result.ok);
       if (hasError) {
-        const errorMessage = scheduleResults.find((r) => !r.ok)?.error.message;
-        setError(errorMessage || "Failed to schedule some posts");
+        const failedResult = scheduleResults.find((r) => !r.ok);
+        const errorMessage = failedResult?.error?.message || "Failed to schedule some posts";
+        console.error("Error scheduling posts:", failedResult?.error);
+        setError(errorMessage);
       } else {
         // Track which images were just posted
         const newPostedIds = new Set(postedImageIds);
         const newPostedCats = new Set(postedCategories);
         let postedCategory: GeneratedImageType | null = null;
 
-        selectResult.data.selected_images
+        selectResult.data.selected_posts
           .filter((post) => currentlySelectedInUI.includes(post.flyer_generated_image_id))
           .forEach((post) => {
             newPostedIds.add(post.flyer_generated_image_id);
@@ -370,7 +378,7 @@ export function InstagramSchedulingPage({
         setRecentlyPostedCategory(postedCategory);
 
         // Determine success message based on posting modes
-        const newlyScheduledPosts = selectResult.data.selected_images.filter((post) =>
+        const newlyScheduledPosts = selectResult.data.selected_posts.filter((post) =>
           currentlySelectedInUI.includes(post.flyer_generated_image_id)
         );
         
@@ -410,10 +418,16 @@ export function InstagramSchedulingPage({
         }
         
         // Reload scheduled posts
-        await loadScheduledPosts();
+        try {
+          await loadScheduledPosts();
+        } catch (err) {
+          console.error("Error reloading scheduled posts after scheduling:", err);
+          // Don't override success message with error
+        }
       }
     } catch (err) {
-      setError("An unexpected error occurred");
+      console.error("Error in handleSubmit:", err);
+      setError(err instanceof Error ? err.message : "An unexpected error occurred");
     } finally {
       setIsSubmitting(false);
     }
@@ -428,12 +442,18 @@ export function InstagramSchedulingPage({
 
       if (result.ok) {
         setSuccess("Post canceled successfully");
-        await loadScheduledPosts();
+        try {
+          await loadScheduledPosts();
+        } catch (err) {
+          console.error("Error reloading scheduled posts after cancel:", err);
+          // Don't override success message with error
+        }
       } else {
         setError(result.error.message || "Failed to cancel post");
       }
     } catch (err) {
-      setError("An unexpected error occurred");
+      console.error("Error canceling post:", err);
+      setError(err instanceof Error ? err.message : "An unexpected error occurred");
     } finally {
       setIsCanceling(null);
     }
