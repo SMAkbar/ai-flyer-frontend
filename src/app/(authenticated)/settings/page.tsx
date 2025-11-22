@@ -9,6 +9,7 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState<UserMetaSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isOAuthLoading, setIsOAuthLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   
@@ -22,6 +23,18 @@ export default function SettingsPage() {
 
   useEffect(() => {
     loadSettings();
+    
+    // Handle OAuth callback
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get("code");
+      const state = urlParams.get("state");
+      const oauth = urlParams.get("oauth");
+
+      if (oauth === "meta" && code && state) {
+        handleOAuthCallback(code, state);
+      }
+    }
   }, []);
 
   async function loadSettings() {
@@ -75,6 +88,135 @@ export default function SettingsPage() {
       [name]: value === "" ? null : value 
     }));
   }
+
+  async function handleConnectWithMeta() {
+    setIsOAuthLoading(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      // First, ensure settings are saved (if they exist but aren't saved yet)
+      // The backend requires settings to be saved before OAuth
+      const needsSaving = !settings || 
+          settings.meta_app_id !== formData.meta_app_id ||
+          settings.meta_app_secret !== formData.meta_app_secret ||
+          settings.instagram_user_id !== formData.instagram_user_id;
+      
+      if (needsSaving) {
+        // Auto-save settings first
+        const saveRes = await settingsApi.updateMetaSettings({
+          meta_app_id: formData.meta_app_id,
+          meta_app_secret: formData.meta_app_secret,
+          instagram_user_id: formData.instagram_user_id,
+          meta_access_token: formData.meta_access_token,
+        });
+        
+        if (!saveRes.ok) {
+          setError(saveRes.error.message || "Failed to save settings. Please save manually first.");
+          setIsOAuthLoading(false);
+          return;
+        }
+        
+        // Update local state
+        setSettings(saveRes.data);
+      }
+
+      const res = await settingsApi.getOAuthAuthorizeUrl();
+      if (!res.ok) {
+        let errorMessage = res.error.message || "Failed to generate OAuth URL";
+        
+        // Provide helpful guidance for common errors
+        if (errorMessage.includes("Invalid Meta App ID") || errorMessage.includes("App ID")) {
+          errorMessage += "\n\nPlease verify:\n• Your App ID is correct (found in Meta App Settings > Basic)\n• The App ID is numeric only (no spaces or special characters)\n• You're using the App ID (not the App Secret)\n• The redirect URI is configured in Meta App Settings > Facebook Login > Settings";
+        }
+        
+        setError(errorMessage);
+        setIsOAuthLoading(false);
+        return;
+      }
+
+      // Store state token in sessionStorage for validation on callback
+      sessionStorage.setItem("meta_oauth_state", res.data.state);
+
+      // Redirect to Meta OAuth URL
+      window.location.href = res.data.auth_url;
+    } catch (err) {
+      setError("Failed to initiate OAuth flow");
+      setIsOAuthLoading(false);
+    }
+  }
+
+  async function handleOAuthCallback(code: string, state: string) {
+    setIsOAuthLoading(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      // Validate state token
+      const storedState = sessionStorage.getItem("meta_oauth_state");
+      if (!storedState || storedState !== state) {
+        setError("Invalid OAuth state token. Please try again.");
+        setIsOAuthLoading(false);
+        sessionStorage.removeItem("meta_oauth_state");
+        return;
+      }
+
+      // Clear state token
+      sessionStorage.removeItem("meta_oauth_state");
+
+      // Exchange code for token
+      const res = await settingsApi.handleOAuthCallback({ code, state });
+      if (!res.ok) {
+        let errorMessage = res.error.message || "Failed to complete OAuth flow";
+        
+        // Provide helpful guidance for OAuth errors
+        if (errorMessage.includes("Invalid App ID") || errorMessage.includes("PLATFORM__INVALID_APP_ID")) {
+          errorMessage = "Invalid Meta App ID. Please check:\n\n" +
+            "1. Your App ID is correct (found in Meta App Settings > Basic)\n" +
+            "2. The App ID contains only numbers (no spaces or special characters)\n" +
+            "3. You're using the App ID, not the App Secret\n" +
+            "4. The redirect URI is added in Meta App Settings > Facebook Login > Settings:\n" +
+            "   - Development: http://localhost:3000/settings?oauth=meta\n" +
+            "   - Production: https://yourdomain.com/settings?oauth=meta";
+        }
+        
+        setError(errorMessage);
+        setIsOAuthLoading(false);
+        return;
+      }
+
+      // Reload settings to get updated token
+      await loadSettings();
+      setSuccessMessage(res.data.message || "Successfully connected to Meta!");
+      
+      // Clear URL parameters
+      window.history.replaceState({}, "", "/settings");
+    } catch (err) {
+      setError("Failed to complete OAuth flow");
+    } finally {
+      setIsOAuthLoading(false);
+    }
+  }
+
+  // Check if OAuth button should be shown
+  // Show button if required fields are filled (either in saved settings or form data)
+  const shouldShowOAuthButton = () => {
+    // Check if we have the required fields in either settings or formData
+    const hasAppId = settings?.meta_app_id || formData.meta_app_id;
+    const hasAppSecret = settings?.meta_app_secret || formData.meta_app_secret;
+    const hasInstagramUserId = settings?.instagram_user_id || formData.instagram_user_id;
+    
+    return hasAppId && hasAppSecret && hasInstagramUserId;
+  };
+  
+  // Check if we should show "Connect" (no token) vs "Reconnect" (has token)
+  const getOAuthButtonText = () => {
+    const hasToken = settings?.meta_access_token || formData.meta_access_token;
+    if (hasToken) {
+      return isOAuthLoading ? "Reconnecting..." : "Reconnect with Meta";
+    }
+    return isOAuthLoading ? "Connecting..." : "Connect with Meta";
+  };
 
   if (isLoading) {
     return (
@@ -253,11 +395,115 @@ export default function SettingsPage() {
           style={{
             fontSize: "14px",
             color: tokens.textSecondary,
-            marginBottom: "24px",
+            marginBottom: "16px",
           }}
         >
           Configure your Meta App credentials, Instagram Business Account ID, and Access Token. These credentials are encrypted and stored securely.
         </p>
+        
+        <div
+          style={{
+            marginBottom: "24px",
+            padding: "12px 16px",
+            backgroundColor: tokens.bgBase,
+            border: `1px solid ${tokens.border}`,
+            borderRadius: "8px",
+            fontSize: "13px",
+          }}
+        >
+          <p style={{ margin: 0, marginBottom: "8px", fontWeight: 500, color: tokens.textPrimary }}>
+            ⚠️ Important: Before using OAuth, configure the redirect URI in Meta App Settings:
+          </p>
+          <ol style={{ margin: 0, paddingLeft: "20px", color: tokens.textSecondary }}>
+            <li>Go to <a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener noreferrer" style={{ color: tokens.primary }}>Meta App Dashboard</a></li>
+            <li>Select your app → <strong>Facebook Login</strong> → <strong>Settings</strong></li>
+            <li>Add this redirect URI to <strong>"Valid OAuth Redirect URIs"</strong>:</li>
+          </ol>
+          <code
+            style={{
+              display: "block",
+              marginTop: "8px",
+              padding: "8px 12px",
+              backgroundColor: tokens.bgElevated,
+              border: `1px solid ${tokens.border}`,
+              borderRadius: "6px",
+              fontSize: "12px",
+              fontFamily: "monospace",
+              wordBreak: "break-all",
+            }}
+          >
+            {typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"}/settings?oauth=meta
+          </code>
+          <p style={{ margin: "8px 0 0 0", fontSize: "12px", color: tokens.textSecondary, fontStyle: "italic" }}>
+            Also ensure <strong>Facebook Login</strong> product is added to your app.
+          </p>
+        </div>
+        
+        {shouldShowOAuthButton() && !settings?.meta_access_token && (
+          <div
+            style={{
+              marginBottom: "24px",
+              padding: "16px",
+              backgroundColor: `${tokens.primary}10`,
+              border: `1px solid ${tokens.primary}30`,
+              borderRadius: "12px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "16px",
+            }}
+          >
+            <div style={{ flex: 1 }}>
+              <p
+                style={{
+                  fontSize: "14px",
+                  fontWeight: 500,
+                  color: tokens.textPrimary,
+                  margin: 0,
+                  marginBottom: "4px",
+                }}
+              >
+                Generate Access Token Automatically
+              </p>
+              <p
+                style={{
+                  fontSize: "13px",
+                  color: tokens.textSecondary,
+                  margin: 0,
+                  marginBottom: "8px",
+                }}
+              >
+                Click the button below to authenticate with Meta and automatically generate a long-lived access token (valid for 60 days).
+              </p>
+              <p
+                style={{
+                  fontSize: "12px",
+                  color: tokens.textSecondary,
+                  margin: 0,
+                  fontStyle: "italic",
+                }}
+              >
+                Note: Make sure to add the redirect URI in Meta App Settings → Facebook Login → Settings:
+                <br />
+                <code style={{ fontSize: "11px", backgroundColor: tokens.bgBase, padding: "2px 4px", borderRadius: "4px" }}>
+                  {typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"}/settings?oauth=meta
+                </code>
+              </p>
+            </div>
+            <Button
+              type="button"
+              onClick={handleConnectWithMeta}
+              disabled={isOAuthLoading}
+              style={{
+                fontSize: "14px",
+                padding: "10px 20px",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {getOAuthButtonText()}
+            </Button>
+          </div>
+        )}
 
         <form onSubmit={handleSave}>
           <div
@@ -370,18 +616,52 @@ export default function SettingsPage() {
             </div>
 
             <div>
-              <label
-                htmlFor="meta_access_token"
+              <div
                 style={{
-                  display: "block",
-                  fontSize: "14px",
-                  fontWeight: 500,
-                  color: tokens.textPrimary,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
                   marginBottom: "8px",
                 }}
               >
-                Meta Access Token
-              </label>
+                <label
+                  htmlFor="meta_access_token"
+                  style={{
+                    display: "block",
+                    fontSize: "14px",
+                    fontWeight: 500,
+                    color: tokens.textPrimary,
+                  }}
+                >
+                  Meta Access Token
+                  {settings?.meta_access_token && (
+                    <span
+                      style={{
+                        marginLeft: "8px",
+                        fontSize: "12px",
+                        color: tokens.textSecondary,
+                        fontWeight: 400,
+                      }}
+                    >
+                      (Click "Reconnect" to generate a new token)
+                    </span>
+                  )}
+                </label>
+                {shouldShowOAuthButton() && (
+                  <Button
+                    type="button"
+                    onClick={handleConnectWithMeta}
+                    disabled={isOAuthLoading}
+                    style={{
+                      fontSize: "13px",
+                      padding: "8px 16px",
+                      minWidth: "auto",
+                    }}
+                  >
+                    {getOAuthButtonText()}
+                  </Button>
+                )}
+              </div>
               <textarea
                 id="meta_access_token"
                 name="meta_access_token"
@@ -399,8 +679,20 @@ export default function SettingsPage() {
                   fontFamily: "monospace",
                   resize: "vertical",
                 }}
-                placeholder="Enter your Meta Access Token (optional)"
+                placeholder="Enter your Meta Access Token (optional) or click 'Connect with Meta' to generate automatically"
               />
+              {settings?.token_expires_at && (
+                <p
+                  style={{
+                    fontSize: "12px",
+                    color: tokens.textSecondary,
+                    marginTop: "8px",
+                    marginBottom: 0,
+                  }}
+                >
+                  Token expires: {new Date(settings.token_expires_at).toLocaleString()}
+                </p>
+              )}
             </div>
 
           </div>
