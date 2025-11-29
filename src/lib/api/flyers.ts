@@ -56,10 +56,17 @@ export type FlyerInformationExtractionUpdate = {
   venue_name?: string | null;
 };
 
+export type BulkFlyerCreateResponse = {
+  batch_id: number;
+  flyers: FlyerRead[];
+  message: string;
+};
+
 export const flyersApi = {
   getAll: () => apiClient.get<FlyerRead[]>("/flyers"),
   getById: (id: number) => apiClient.get<FlyerDetailRead>(`/flyers/${id}`),
   create: (formData: FormData) => apiClient.postForm<FlyerRead>("/flyers", formData),
+  createBulk: (formData: FormData) => apiClient.postForm<BulkFlyerCreateResponse>("/flyers/bulk", formData),
   getExtraction: (id: number) => apiClient.get<FlyerInformationExtraction>(`/flyers/${id}/extraction`),
   updateExtraction: (id: number, data: FlyerInformationExtractionUpdate) =>
     apiClient.patch<FlyerInformationExtraction>(`/flyers/${id}/extraction`, data),

@@ -1,11 +1,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { settingsApi, type UserMetaSettings, type UserMetaSettingsUpdate } from "@/lib/api/settings";
+import { 
+  settingsApi, 
+  type UserMetaSettings, 
+  type UserMetaSettingsUpdate,
+  type UserWordPressSettings,
+  type UserWordPressSettingsUpdate,
+} from "@/lib/api/settings";
 import { Button } from "@/components/ui/Button";
 import { tokens } from "@/components/theme/tokens";
 
 export default function SettingsPage() {
+  // Meta/Instagram state
   const [settings, setSettings] = useState<UserMetaSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -13,16 +20,33 @@ export default function SettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   
-  // Form state
+  // WordPress state
+  const [wpSettings, setWpSettings] = useState<UserWordPressSettings | null>(null);
+  const [isWpLoading, setIsWpLoading] = useState(true);
+  const [isWpSaving, setIsWpSaving] = useState(false);
+  const [isWpTesting, setIsWpTesting] = useState(false);
+  const [wpError, setWpError] = useState<string | null>(null);
+  const [wpSuccessMessage, setWpSuccessMessage] = useState<string | null>(null);
+  
+  // Meta form state
   const [formData, setFormData] = useState<UserMetaSettingsUpdate>({
     meta_app_id: "",
     meta_app_secret: "",
     meta_access_token: null,
     instagram_user_id: "",
   });
+  
+  // WordPress form state
+  const [wpFormData, setWpFormData] = useState<UserWordPressSettingsUpdate>({
+    wordpress_site_url: "",
+    wordpress_username: "",
+    wordpress_app_password: null,
+    is_enabled: true,
+  });
 
   useEffect(() => {
     loadSettings();
+    loadWordPressSettings();
     
     // Handle OAuth callback
     if (typeof window !== "undefined") {
@@ -197,6 +221,92 @@ export default function SettingsPage() {
       setIsOAuthLoading(false);
     }
   }
+
+  // =============================================================================
+  // WordPress Functions
+  // =============================================================================
+
+  async function loadWordPressSettings() {
+    setIsWpLoading(true);
+    setWpError(null);
+    const res = await settingsApi.getWordPressSettings();
+    setIsWpLoading(false);
+
+    if (!res.ok) {
+      // 404 means settings not configured yet, which is fine
+      if (res.error.status === 404) {
+        setWpSettings(null);
+        return;
+      }
+      setWpError(res.error.message || "Failed to load WordPress settings");
+      return;
+    }
+
+    setWpSettings(res.data);
+    setWpFormData({
+      wordpress_site_url: res.data.wordpress_site_url,
+      wordpress_username: res.data.wordpress_username,
+      wordpress_app_password: null, // Don't populate the password
+      is_enabled: res.data.is_enabled,
+    });
+  }
+
+  async function handleWpSave(e: React.FormEvent) {
+    e.preventDefault();
+    setIsWpSaving(true);
+    setWpError(null);
+    setWpSuccessMessage(null);
+
+    const res = await settingsApi.updateWordPressSettings(wpFormData);
+    setIsWpSaving(false);
+
+    if (!res.ok) {
+      setWpError(res.error.message || "Failed to update WordPress settings");
+      return;
+    }
+
+    setWpSettings(res.data);
+    setWpFormData((prev) => ({
+      ...prev,
+      wordpress_app_password: null, // Clear password after save
+    }));
+    setWpSuccessMessage("WordPress settings saved successfully!");
+    setTimeout(() => setWpSuccessMessage(null), 3000);
+  }
+
+  function handleWpChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const { name, value, type, checked } = e.target;
+    setWpFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : (value === "" ? null : value),
+    }));
+  }
+
+  async function handleTestWpConnection() {
+    setIsWpTesting(true);
+    setWpError(null);
+    setWpSuccessMessage(null);
+
+    try {
+      const res = await settingsApi.testWordPressConnection();
+
+      if (!res.ok) {
+        setWpError(res.error.message || "Connection test failed");
+        setIsWpTesting(false);
+        return;
+      }
+
+      setWpSuccessMessage(`Connected successfully as ${res.data.user_name || "WordPress user"}`);
+    } catch {
+      setWpError("Failed to test connection");
+    } finally {
+      setIsWpTesting(false);
+    }
+  }
+
+  // =============================================================================
+  // Meta OAuth Helpers
+  // =============================================================================
 
   // Check if OAuth button should be shown
   // Show button if required fields are filled (either in saved settings or form data)
@@ -415,7 +525,7 @@ export default function SettingsPage() {
             ⚠️ Important: Before using OAuth, configure the redirect URI in Meta App Settings:
           </p>
           <ol style={{ margin: 0, paddingLeft: "20px", color: tokens.textSecondary }}>
-            <li>Go to <a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener noreferrer" style={{ color: tokens.primary }}>Meta App Dashboard</a></li>
+            <li>Go to <a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener noreferrer" style={{ color: tokens.accent }}>Meta App Dashboard</a></li>
             <li>Select your app → <strong>Facebook Login</strong> → <strong>Settings</strong></li>
             <li>Add this redirect URI to <strong>"Valid OAuth Redirect URIs"</strong>:</li>
           </ol>
@@ -444,8 +554,8 @@ export default function SettingsPage() {
             style={{
               marginBottom: "24px",
               padding: "16px",
-              backgroundColor: `${tokens.primary}10`,
-              border: `1px solid ${tokens.primary}30`,
+              backgroundColor: `${tokens.accent}10`,
+              border: `1px solid ${tokens.accent}30`,
               borderRadius: "12px",
               display: "flex",
               alignItems: "center",
@@ -718,6 +828,322 @@ export default function SettingsPage() {
             </Button>
           </div>
         </form>
+      </div>
+
+      {/* WordPress Settings Section */}
+      <div
+        style={{
+          backgroundColor: tokens.bgElevated,
+          border: `1px solid ${tokens.border}`,
+          borderRadius: "12px",
+          padding: "24px",
+          marginBottom: "24px",
+        }}
+      >
+        <h2
+          style={{
+            fontSize: "20px",
+            fontWeight: 600,
+            color: tokens.textPrimary,
+            marginBottom: "8px",
+          }}
+        >
+          WordPress Settings
+        </h2>
+        <p
+          style={{
+            fontSize: "14px",
+            color: tokens.textSecondary,
+            marginBottom: "16px",
+          }}
+        >
+          Configure your WordPress credentials for automatic event posting. These credentials are encrypted and stored securely.
+        </p>
+
+        {isWpLoading ? (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "40px",
+              color: tokens.textSecondary,
+            }}
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 20 20"
+              fill="none"
+              style={{ animation: "spin 1s linear infinite", marginRight: "8px" }}
+            >
+              <circle
+                cx="10"
+                cy="10"
+                r="7"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeDasharray="44"
+                strokeDashoffset="33"
+                strokeLinecap="round"
+              />
+            </svg>
+            Loading WordPress settings...
+          </div>
+        ) : (
+          <>
+            {wpError && (
+              <div
+                style={{
+                  marginBottom: "16px",
+                  padding: "12px 16px",
+                  backgroundColor: `${tokens.danger}15`,
+                  border: `1px solid ${tokens.danger}40`,
+                  borderRadius: "8px",
+                  color: tokens.danger,
+                  fontSize: "14px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                  <path
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  />
+                </svg>
+                {wpError}
+              </div>
+            )}
+
+            {wpSuccessMessage && (
+              <div
+                style={{
+                  marginBottom: "16px",
+                  padding: "12px 16px",
+                  backgroundColor: `${tokens.success}15`,
+                  border: `1px solid ${tokens.success}40`,
+                  borderRadius: "8px",
+                  color: tokens.success,
+                  fontSize: "14px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                  <path
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293l-3 3a1 1 0 01-1.414 0l-1.5-1.5a1 1 0 011.414-1.414L10 9.586l2.793-2.793a1 1 0 011.414 1.414z"
+                  />
+                </svg>
+                {wpSuccessMessage}
+              </div>
+            )}
+
+            <div
+              style={{
+                marginBottom: "24px",
+                padding: "12px 16px",
+                backgroundColor: tokens.bgBase,
+                border: `1px solid ${tokens.border}`,
+                borderRadius: "8px",
+                fontSize: "13px",
+              }}
+            >
+              <p style={{ margin: 0, marginBottom: "8px", fontWeight: 500, color: tokens.textPrimary }}>
+                📝 How to get your Application Password:
+              </p>
+              <ol style={{ margin: 0, paddingLeft: "20px", color: tokens.textSecondary }}>
+                <li>Log in to your WordPress admin panel</li>
+                <li>Go to <strong>Users → Profile</strong></li>
+                <li>Scroll to <strong>"Application Passwords"</strong> section</li>
+                <li>Enter a name (e.g., "AI Flyer") and click <strong>"Add New"</strong></li>
+                <li>Copy the generated password and paste it below</li>
+              </ol>
+            </div>
+
+            <form onSubmit={handleWpSave}>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "20px",
+                }}
+              >
+                <div>
+                  <label
+                    htmlFor="wordpress_site_url"
+                    style={{
+                      display: "block",
+                      fontSize: "14px",
+                      fontWeight: 500,
+                      color: tokens.textPrimary,
+                      marginBottom: "8px",
+                    }}
+                  >
+                    WordPress Site URL <span style={{ color: tokens.danger }}>*</span>
+                  </label>
+                  <input
+                    type="url"
+                    id="wordpress_site_url"
+                    name="wordpress_site_url"
+                    value={wpFormData.wordpress_site_url || ""}
+                    onChange={handleWpChange}
+                    required
+                    style={{
+                      width: "100%",
+                      padding: "12px",
+                      fontSize: "14px",
+                      color: tokens.textPrimary,
+                      backgroundColor: tokens.bgBase,
+                      border: `1px solid ${tokens.border}`,
+                      borderRadius: "8px",
+                      fontFamily: "inherit",
+                    }}
+                    placeholder="e.g., https://dubevents.club"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="wordpress_username"
+                    style={{
+                      display: "block",
+                      fontSize: "14px",
+                      fontWeight: 500,
+                      color: tokens.textPrimary,
+                      marginBottom: "8px",
+                    }}
+                  >
+                    WordPress Username <span style={{ color: tokens.danger }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="wordpress_username"
+                    name="wordpress_username"
+                    value={wpFormData.wordpress_username || ""}
+                    onChange={handleWpChange}
+                    required
+                    style={{
+                      width: "100%",
+                      padding: "12px",
+                      fontSize: "14px",
+                      color: tokens.textPrimary,
+                      backgroundColor: tokens.bgBase,
+                      border: `1px solid ${tokens.border}`,
+                      borderRadius: "8px",
+                      fontFamily: "inherit",
+                    }}
+                    placeholder="Your WordPress admin username or email"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="wordpress_app_password"
+                    style={{
+                      display: "block",
+                      fontSize: "14px",
+                      fontWeight: 500,
+                      color: tokens.textPrimary,
+                      marginBottom: "8px",
+                    }}
+                  >
+                    Application Password {!wpSettings && <span style={{ color: tokens.danger }}>*</span>}
+                    {wpSettings && (
+                      <span style={{ fontWeight: 400, color: tokens.textSecondary, marginLeft: "8px" }}>
+                        (leave blank to keep existing)
+                      </span>
+                    )}
+                  </label>
+                  <input
+                    type="password"
+                    id="wordpress_app_password"
+                    name="wordpress_app_password"
+                    value={wpFormData.wordpress_app_password || ""}
+                    onChange={handleWpChange}
+                    required={!wpSettings}
+                    style={{
+                      width: "100%",
+                      padding: "12px",
+                      fontSize: "14px",
+                      color: tokens.textPrimary,
+                      backgroundColor: tokens.bgBase,
+                      border: `1px solid ${tokens.border}`,
+                      borderRadius: "8px",
+                      fontFamily: "inherit",
+                    }}
+                    placeholder={wpSettings ? "Enter new password to update" : "e.g., xxxx xxxx xxxx xxxx xxxx xxxx"}
+                  />
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    id="is_enabled"
+                    name="is_enabled"
+                    checked={wpFormData.is_enabled}
+                    onChange={handleWpChange}
+                    style={{
+                      width: "18px",
+                      height: "18px",
+                      accentColor: tokens.accent,
+                    }}
+                  />
+                  <label
+                    htmlFor="is_enabled"
+                    style={{
+                      fontSize: "14px",
+                      color: tokens.textPrimary,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Enable WordPress posting
+                  </label>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: "12px",
+                  marginTop: "24px",
+                  paddingTop: "24px",
+                  borderTop: `1px solid ${tokens.border}`,
+                }}
+              >
+                <Button
+                  type="button"
+                  onClick={handleTestWpConnection}
+                  disabled={isWpTesting || !wpSettings}
+                  variant="secondary"
+                  style={{
+                    minWidth: "140px",
+                  }}
+                >
+                  {isWpTesting ? "Testing..." : "Test Connection"}
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isWpSaving}
+                  style={{
+                    minWidth: "120px",
+                  }}
+                >
+                  {isWpSaving ? "Saving..." : "Save Settings"}
+                </Button>
+              </div>
+            </form>
+          </>
+        )}
       </div>
     </div>
   );

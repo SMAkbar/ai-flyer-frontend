@@ -18,15 +18,38 @@ export default function CreateFlyerPage() {
     setSuccessMessage(null);
 
     try {
-      const result = await flyersApi.create(formData);
+      // Get all images from the form data
+      const images = formData.getAll("images");
+      
+      if (images.length === 1) {
+        // Single image: use the single endpoint
+        const singleFormData = new FormData();
+        singleFormData.append("image", images[0]);
+        
+        const result = await flyersApi.create(singleFormData);
 
-      if (result.ok) {
-        setSuccessMessage("Flyer created successfully!");
-        setTimeout(() => {
-          router.push("/flyers");
-        }, 1500);
+        if (result.ok) {
+          setSuccessMessage("Flyer created successfully! Processing started.");
+          setTimeout(() => {
+            router.push("/flyers");
+          }, 1500);
+        } else {
+          setError(result.error.message || "Failed to create flyer");
+        }
       } else {
-        setError(result.error.message || "Failed to create flyer");
+        // Multiple images: use the bulk endpoint
+        const result = await flyersApi.createBulk(formData);
+
+        if (result.ok) {
+          setSuccessMessage(
+            `${result.data.flyers.length} flyers uploaded successfully! Processing started in background.`
+          );
+          setTimeout(() => {
+            router.push("/flyers");
+          }, 1500);
+        } else {
+          setError(result.error.message || "Failed to upload flyers");
+        }
       }
     } catch (err) {
       setError("An unexpected error occurred");
@@ -57,7 +80,7 @@ export default function CreateFlyerPage() {
             letterSpacing: "-0.02em",
           }}
         >
-          Create Flyer
+          Create Flyers
         </h1>
         <p
           style={{
@@ -66,7 +89,7 @@ export default function CreateFlyerPage() {
             margin: 0,
           }}
         >
-          Upload an image and we'll automatically extract event information from your flyer
+          Upload one or more images and we'll automatically extract event information from your flyers
         </p>
       </div>
 
@@ -140,4 +163,3 @@ export default function CreateFlyerPage() {
     </div>
   );
 }
-

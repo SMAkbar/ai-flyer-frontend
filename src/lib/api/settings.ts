@@ -1,5 +1,9 @@
 import { apiClient } from "./client";
 
+// =============================================================================
+// Meta/Instagram Settings Types
+// =============================================================================
+
 export type UserMetaSettings = {
   id: number;
   user_id: number;
@@ -32,7 +36,39 @@ export type OAuthCallbackResponse = {
   message: string;
 };
 
+// =============================================================================
+// WordPress Settings Types
+// =============================================================================
+
+export type UserWordPressSettings = {
+  id: number;
+  user_id: number;
+  wordpress_site_url: string;
+  wordpress_username: string;
+  wordpress_app_password: string;
+  is_enabled: boolean;
+};
+
+export type UserWordPressSettingsUpdate = {
+  wordpress_site_url: string;
+  wordpress_username: string;
+  wordpress_app_password?: string | null;
+  is_enabled: boolean;
+};
+
+export type WordPressConnectionTestResponse = {
+  success: boolean;
+  message: string;
+  user_id?: number | null;
+  user_name?: string | null;
+};
+
+// =============================================================================
+// Settings API
+// =============================================================================
+
 export const settingsApi = {
+  // Meta/Instagram settings
   getMetaSettings: () => apiClient.get<UserMetaSettings>("/settings/meta"),
   updateMetaSettings: (data: UserMetaSettingsUpdate) =>
     apiClient.put<UserMetaSettings>("/settings/meta", data),
@@ -40,5 +76,13 @@ export const settingsApi = {
     apiClient.get<OAuthAuthorizeResponse>("/settings/meta/oauth/authorize"),
   handleOAuthCallback: (data: OAuthCallbackRequest) =>
     apiClient.post<OAuthCallbackResponse>("/settings/meta/oauth/callback", data),
+
+  // WordPress settings
+  getWordPressSettings: () =>
+    apiClient.get<UserWordPressSettings>("/settings/wordpress"),
+  updateWordPressSettings: (data: UserWordPressSettingsUpdate) =>
+    apiClient.put<UserWordPressSettings>("/settings/wordpress", data),
+  testWordPressConnection: () =>
+    apiClient.post<WordPressConnectionTestResponse>("/settings/wordpress/test", {}),
 };
 

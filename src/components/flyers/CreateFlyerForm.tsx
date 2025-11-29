@@ -5,6 +5,11 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { tokens } from "@/components/theme/tokens";
 
+type ImagePreview = {
+  file: File;
+  preview: string;
+};
+
 type CreateFlyerFormProps = {
   onSubmit: (formData: FormData) => Promise<void>;
   onCancel: () => void;
@@ -12,40 +17,72 @@ type CreateFlyerFormProps = {
 };
 
 export function CreateFlyerForm({ onSubmit, onCancel, isLoading }: CreateFlyerFormProps) {
-  const [image, setImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [images, setImages] = useState<ImagePreview[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const newImages: ImagePreview[] = [];
+    const invalidFiles: string[] = [];
+
+    Array.from(files).forEach((file) => {
       if (!file.type.startsWith("image/")) {
-        setError("Please select an image file");
+        invalidFiles.push(file.name);
         return;
       }
-      setImage(file);
-      setError(null);
 
       // Create preview
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImagePreview(reader.result as string);
+        newImages.push({
+          file,
+          preview: reader.result as string,
+        });
+
+        // Update state when all files are processed
+        if (newImages.length + invalidFiles.length === files.length) {
+          setImages((prev) => [...prev, ...newImages]);
+          if (invalidFiles.length > 0) {
+            setError(`These files are not images and were skipped: ${invalidFiles.join(", ")}`);
+          } else {
+            setError(null);
+          }
+        }
       };
       reader.readAsDataURL(file);
-    }
+    });
+
+    // Reset input to allow selecting the same file again
+    e.target.value = "";
+  };
+
+  const removeImage = (index: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== index));
+    setError(null);
+  };
+
+  const clearAllImages = () => {
+    setImages([]);
+    setError(null);
   };
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
 
-    if (!image) {
-      setError("Please select an image");
+    if (images.length === 0) {
+      setError("Please select at least one image");
       return;
     }
 
     const formData = new FormData();
-    formData.append("image", image);
+    
+    // Append all images with the same field name for bulk upload
+    images.forEach((img) => {
+      formData.append("images", img.file);
+    });
 
     await onSubmit(formData);
   }
@@ -132,8 +169,24 @@ export function CreateFlyerForm({ onSubmit, onCancel, isLoading }: CreateFlyerFo
               <polyline points="21,15 16,10 5,21" />
             </svg>
             Image Upload
+            {images.length > 0 && (
+              <span
+                style={{
+                  fontSize: "14px",
+                  fontWeight: 400,
+                  color: tokens.accent,
+                  marginLeft: "auto",
+                }}
+              >
+                {images.length} image{images.length !== 1 ? "s" : ""} selected
+              </span>
+            )}
           </h2>
-          <FormField label="Flyer Image" required hint="Upload an image file (JPG, PNG, etc.)">
+          <FormField 
+            label="Flyer Images" 
+            required 
+            hint="Upload one or more image files (JPG, PNG, etc.). You can select multiple files at once."
+          >
             <div
               style={{
                 position: "relative",
@@ -153,9 +206,10 @@ export function CreateFlyerForm({ onSubmit, onCancel, isLoading }: CreateFlyerFo
               }}
             >
               <input
-                id="image"
+                id="images"
                 type="file"
                 accept="image/*"
+                multiple
                 onChange={handleImageChange}
                 disabled={isLoading}
                 style={{
@@ -169,77 +223,148 @@ export function CreateFlyerForm({ onSubmit, onCancel, isLoading }: CreateFlyerFo
                   fontSize: "14px",
                 }}
               />
-              {image && (
+              
+              {/* File list summary */}
+              {images.length > 0 && (
                 <div
                   style={{
-                    marginTop: "12px",
+                    marginTop: "16px",
                     padding: "12px",
                     backgroundColor: tokens.bgElevated,
                     border: `1px solid ${tokens.accent}40`,
                     borderRadius: "8px",
                     display: "flex",
                     alignItems: "center",
-                    gap: "10px",
+                    justifyContent: "space-between",
                   }}
                 >
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    style={{ flexShrink: 0, color: tokens.accent }}
-                  >
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                    <polyline points="14,2 14,8 20,8" />
-                    <line x1="16" y1="13" x2="8" y2="13" />
-                    <line x1="16" y1="17" x2="8" y2="17" />
-                    <polyline points="10,9 9,9 8,9" />
-                  </svg>
-                  <span
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      style={{ flexShrink: 0, color: tokens.accent }}
+                    >
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14,2 14,8 20,8" />
+                    </svg>
+                    <span style={{ fontSize: "14px", color: tokens.textPrimary }}>
+                      {images.length} image{images.length !== 1 ? "s" : ""} ready to upload
+                    </span>
+                    <span style={{ fontSize: "12px", color: tokens.textMuted }}>
+                      ({(images.reduce((sum, img) => sum + img.file.size, 0) / 1024 / 1024).toFixed(2)} MB total)
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={clearAllImages}
+                    disabled={isLoading}
                     style={{
-                      fontSize: "14px",
-                      color: tokens.textPrimary,
-                      flex: 1,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {image.name}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: "12px",
+                      padding: "6px 12px",
+                      backgroundColor: "transparent",
                       color: tokens.textMuted,
+                      border: `1px solid ${tokens.border}`,
+                      borderRadius: "6px",
+                      cursor: isLoading ? "not-allowed" : "pointer",
+                      fontSize: "12px",
+                      transition: "all 0.2s ease",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = tokens.danger;
+                      e.currentTarget.style.borderColor = tokens.danger;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = tokens.textMuted;
+                      e.currentTarget.style.borderColor = tokens.border;
                     }}
                   >
-                    {(image.size / 1024 / 1024).toFixed(2)} MB
-                  </span>
+                    Clear All
+                  </button>
                 </div>
               )}
-              {imagePreview && (
+
+              {/* Image preview grid */}
+              {images.length > 0 && (
                 <div
                   style={{
                     marginTop: "20px",
-                    borderRadius: "12px",
-                    overflow: "hidden",
-                    border: `1px solid ${tokens.border}`,
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
+                    gap: "16px",
                   }}
                 >
-                  <img
-                    src={imagePreview}
-                    alt="Preview"
-                    style={{
-                      width: "100%",
-                      maxHeight: "400px",
-                      objectFit: "contain",
-                      backgroundColor: tokens.bgHover,
-                    }}
-                  />
+                  {images.map((img, index) => (
+                    <div
+                      key={index}
+                      style={{
+                        position: "relative",
+                        borderRadius: "12px",
+                        overflow: "hidden",
+                        border: `1px solid ${tokens.border}`,
+                        backgroundColor: tokens.bgHover,
+                      }}
+                    >
+                      <img
+                        src={img.preview}
+                        alt={`Preview ${index + 1}`}
+                        style={{
+                          width: "100%",
+                          height: "120px",
+                          objectFit: "cover",
+                        }}
+                      />
+                      <div
+                        style={{
+                          padding: "8px",
+                          fontSize: "12px",
+                          color: tokens.textMuted,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {img.file.name}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeImage(index)}
+                        disabled={isLoading}
+                        style={{
+                          position: "absolute",
+                          top: "6px",
+                          right: "6px",
+                          width: "24px",
+                          height: "24px",
+                          borderRadius: "50%",
+                          backgroundColor: `${tokens.danger}dd`,
+                          color: "white",
+                          border: "none",
+                          cursor: isLoading ? "not-allowed" : "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "14px",
+                          fontWeight: "bold",
+                          transition: "all 0.2s ease",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = tokens.danger;
+                          e.currentTarget.style.transform = "scale(1.1)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = `${tokens.danger}dd`;
+                          e.currentTarget.style.transform = "scale(1)";
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -285,7 +410,7 @@ export function CreateFlyerForm({ onSubmit, onCancel, isLoading }: CreateFlyerFo
             flexWrap: "wrap",
           }}
         >
-          <Button type="submit" disabled={isLoading} style={{ minWidth: "160px" }}>
+          <Button type="submit" disabled={isLoading || images.length === 0} style={{ minWidth: "160px" }}>
             {isLoading ? (
               <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
                 <svg
@@ -324,7 +449,7 @@ export function CreateFlyerForm({ onSubmit, onCancel, isLoading }: CreateFlyerFo
                   <polyline points="17,8 12,3 7,8" />
                   <line x1="12" y1="3" x2="12" y2="15" />
                 </svg>
-                Create Flyer
+                {images.length > 1 ? `Upload ${images.length} Flyers` : "Create Flyer"}
               </span>
             )}
           </Button>
@@ -353,4 +478,3 @@ export function CreateFlyerForm({ onSubmit, onCancel, isLoading }: CreateFlyerFo
     </form>
   );
 }
-
