@@ -20,42 +20,47 @@ export function CreateFlyerForm({ onSubmit, onCancel, isLoading }: CreateFlyerFo
   const [images, setImages] = useState<ImagePreview[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
+    const fileArray = Array.from(files);
     const newImages: ImagePreview[] = [];
-    const invalidFiles: string[] = [];
 
-    Array.from(files).forEach((file) => {
-      if (!file.type.startsWith("image/")) {
-        invalidFiles.push(file.name);
-        return;
-      }
-
-      // Create preview
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        newImages.push({
-          file,
-          preview: reader.result as string,
-        });
-
-        // Update state when all files are processed
-        if (newImages.length + invalidFiles.length === files.length) {
-          setImages((prev) => [...prev, ...newImages]);
-          if (invalidFiles.length > 0) {
-            setError(`These files are not images and were skipped: ${invalidFiles.join(", ")}`);
-          } else {
-            setError(null);
-          }
+    // Process files sequentially to avoid race conditions
+    for (const file of fileArray) {
+      try {
+        const preview = await readFileAsDataURL(file);
+        if (preview) {
+          newImages.push({ file, preview });
         }
-      };
-      reader.readAsDataURL(file);
-    });
+      } catch (err) {
+        console.error(`Failed to read file ${file.name}:`, err);
+      }
+    }
+
+    if (newImages.length > 0) {
+      setImages((prev) => [...prev, ...newImages]);
+      setError(null);
+    } else {
+      setError("No valid images were found in the selected files");
+    }
 
     // Reset input to allow selecting the same file again
     e.target.value = "";
+  };
+
+  const readFileAsDataURL = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        resolve(reader.result as string);
+      };
+      reader.onerror = () => {
+        reject(new Error(`Failed to read file: ${file.name}`));
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
   const removeImage = (index: number) => {

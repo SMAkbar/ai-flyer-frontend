@@ -43,17 +43,22 @@ export type OAuthCallbackResponse = {
 export type UserWordPressSettings = {
   id: number;
   user_id: number;
-  wordpress_site_url: string;
+  wordpress_site_url: string; // Read-only, configured via environment
   wordpress_username: string;
   wordpress_app_password: string;
   is_enabled: boolean;
 };
 
 export type UserWordPressSettingsUpdate = {
-  wordpress_site_url: string;
+  // Note: wordpress_site_url is NOT included - it's system-configured, not user-editable
   wordpress_username: string;
   wordpress_app_password?: string | null;
   is_enabled: boolean;
+};
+
+export type WordPressConnectionTestRequest = {
+  wordpress_username: string;
+  wordpress_app_password: string;
 };
 
 export type WordPressConnectionTestResponse = {
@@ -82,7 +87,7 @@ export const settingsApi = {
     apiClient.get<UserWordPressSettings>("/settings/wordpress"),
   updateWordPressSettings: (data: UserWordPressSettingsUpdate) =>
     apiClient.put<UserWordPressSettings>("/settings/wordpress", data),
-  testWordPressConnection: () =>
-    apiClient.post<WordPressConnectionTestResponse>("/settings/wordpress/test", {}),
+  testWordPressConnection: (data: WordPressConnectionTestRequest) =>
+    apiClient.post<WordPressConnectionTestResponse>("/settings/wordpress/test", data),
 };
 

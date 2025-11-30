@@ -36,9 +36,8 @@ export default function SettingsPage() {
     instagram_user_id: "",
   });
   
-  // WordPress form state
+  // WordPress form state (wordpress_site_url is NOT included - it's system-configured)
   const [wpFormData, setWpFormData] = useState<UserWordPressSettingsUpdate>({
-    wordpress_site_url: "",
     wordpress_username: "",
     wordpress_app_password: null,
     is_enabled: true,
@@ -243,8 +242,8 @@ export default function SettingsPage() {
     }
 
     setWpSettings(res.data);
+    // Note: wordpress_site_url is NOT set in form - it's read-only from server
     setWpFormData({
-      wordpress_site_url: res.data.wordpress_site_url,
       wordpress_username: res.data.wordpress_username,
       wordpress_app_password: null, // Don't populate the password
       is_enabled: res.data.is_enabled,
@@ -287,8 +286,32 @@ export default function SettingsPage() {
     setWpError(null);
     setWpSuccessMessage(null);
 
+    // Validate required fields
+    if (!wpFormData.wordpress_username) {
+      setWpError("Please enter a WordPress username");
+      setIsWpTesting(false);
+      return;
+    }
+
+    // Use form password if entered, otherwise use saved password (if testing saved settings)
+    const passwordToTest = wpFormData.wordpress_app_password;
+    if (!passwordToTest && !wpSettings) {
+      setWpError("Please enter an Application Password");
+      setIsWpTesting(false);
+      return;
+    }
+
+    if (!passwordToTest) {
+      setWpError("Please enter the Application Password to test (saved passwords are not shown for security)");
+      setIsWpTesting(false);
+      return;
+    }
+
     try {
-      const res = await settingsApi.testWordPressConnection();
+      const res = await settingsApi.testWordPressConnection({
+        wordpress_username: wpFormData.wordpress_username,
+        wordpress_app_password: passwordToTest,
+      });
 
       if (!res.ok) {
         setWpError(res.error.message || "Connection test failed");
@@ -970,9 +993,9 @@ export default function SettingsPage() {
                   gap: "20px",
                 }}
               >
+                {/* WordPress Site URL - Read-only display */}
                 <div>
                   <label
-                    htmlFor="wordpress_site_url"
                     style={{
                       display: "block",
                       fontSize: "14px",
@@ -981,27 +1004,85 @@ export default function SettingsPage() {
                       marginBottom: "8px",
                     }}
                   >
-                    WordPress Site URL <span style={{ color: tokens.danger }}>*</span>
+                    WordPress Site
                   </label>
-                  <input
-                    type="url"
-                    id="wordpress_site_url"
-                    name="wordpress_site_url"
-                    value={wpFormData.wordpress_site_url || ""}
-                    onChange={handleWpChange}
-                    required
+                  <div
                     style={{
-                      width: "100%",
-                      padding: "12px",
-                      fontSize: "14px",
-                      color: tokens.textPrimary,
+                      padding: "12px 16px",
                       backgroundColor: tokens.bgBase,
                       border: `1px solid ${tokens.border}`,
                       borderRadius: "8px",
-                      fontFamily: "inherit",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: "12px",
                     }}
-                    placeholder="e.g., https://dubevents.club"
-                  />
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke={tokens.accent}
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                      </svg>
+                      <div>
+                        <div style={{ fontSize: "14px", color: tokens.textPrimary, fontWeight: 500 }}>
+                          {wpSettings?.wordpress_site_url || "https://dubevents.club"}
+                        </div>
+                        <div style={{ fontSize: "12px", color: tokens.textMuted }}>
+                          Events will be posted to this WordPress site
+                        </div>
+                      </div>
+                    </div>
+                    <a
+                      href={(wpSettings?.wordpress_site_url || "https://dubevents.club") + "/event-form/"}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        padding: "8px 12px",
+                        fontSize: "13px",
+                        color: tokens.accent,
+                        backgroundColor: `${tokens.accent}15`,
+                        border: `1px solid ${tokens.accent}30`,
+                        borderRadius: "6px",
+                        textDecoration: "none",
+                        whiteSpace: "nowrap",
+                        transition: "all 0.2s ease",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = `${tokens.accent}25`;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = `${tokens.accent}15`;
+                      }}
+                    >
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                        <polyline points="15 3 21 3 21 9" />
+                        <line x1="10" y1="14" x2="21" y2="3" />
+                      </svg>
+                      View Event Form
+                    </a>
+                  </div>
                 </div>
 
                 <div>
@@ -1050,12 +1131,28 @@ export default function SettingsPage() {
                     }}
                   >
                     Application Password {!wpSettings && <span style={{ color: tokens.danger }}>*</span>}
-                    {wpSettings && (
-                      <span style={{ fontWeight: 400, color: tokens.textSecondary, marginLeft: "8px" }}>
-                        (leave blank to keep existing)
-                      </span>
-                    )}
                   </label>
+                  {wpSettings && (
+                    <div
+                      style={{
+                        marginBottom: "8px",
+                        padding: "8px 12px",
+                        backgroundColor: `${tokens.success}15`,
+                        border: `1px solid ${tokens.success}40`,
+                        borderRadius: "6px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        fontSize: "13px",
+                        color: tokens.success,
+                      }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293l-3 3a1 1 0 01-1.414 0l-1.5-1.5a1 1 0 011.414-1.414L10 9.586l2.793-2.793a1 1 0 011.414 1.414z" />
+                      </svg>
+                      Password saved securely. Leave blank to keep existing, or enter a new one to update.
+                    </div>
+                  )}
                   <input
                     type="password"
                     id="wordpress_app_password"
@@ -1123,7 +1220,7 @@ export default function SettingsPage() {
                 <Button
                   type="button"
                   onClick={handleTestWpConnection}
-                  disabled={isWpTesting || !wpSettings}
+                  disabled={isWpTesting || !wpFormData.wordpress_username || !wpFormData.wordpress_app_password}
                   variant="secondary"
                   style={{
                     minWidth: "140px",
