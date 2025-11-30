@@ -1132,25 +1132,41 @@ export default function SettingsPage() {
                   >
                     Application Password {!wpSettings && <span style={{ color: tokens.danger }}>*</span>}
                   </label>
-                  {wpSettings && (
+                  {wpSettings && !wpFormData.wordpress_app_password && (
                     <div
                       style={{
+                        width: "100%",
+                        padding: "12px",
+                        fontSize: "14px",
+                        color: tokens.textMuted,
+                        backgroundColor: tokens.bgBase,
+                        border: `1px solid ${tokens.border}`,
+                        borderRadius: "8px",
                         marginBottom: "8px",
-                        padding: "8px 12px",
-                        backgroundColor: `${tokens.success}15`,
-                        border: `1px solid ${tokens.success}40`,
-                        borderRadius: "6px",
                         display: "flex",
                         alignItems: "center",
-                        gap: "8px",
-                        fontSize: "13px",
-                        color: tokens.success,
+                        justifyContent: "space-between",
                       }}
                     >
-                      <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293l-3 3a1 1 0 01-1.414 0l-1.5-1.5a1 1 0 011.414-1.414L10 9.586l2.793-2.793a1 1 0 011.414 1.414z" />
-                      </svg>
-                      Password saved securely. Leave blank to keep existing, or enter a new one to update.
+                      <span style={{ letterSpacing: "2px" }}>••••••••••••••••••••••••</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const input = document.getElementById("wordpress_app_password") as HTMLInputElement;
+                          if (input) input.focus();
+                        }}
+                        style={{
+                          padding: "4px 10px",
+                          fontSize: "12px",
+                          color: tokens.accent,
+                          backgroundColor: "transparent",
+                          border: `1px solid ${tokens.accent}`,
+                          borderRadius: "4px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Change
+                      </button>
                     </div>
                   )}
                   <input
@@ -1169,8 +1185,9 @@ export default function SettingsPage() {
                       border: `1px solid ${tokens.border}`,
                       borderRadius: "8px",
                       fontFamily: "inherit",
+                      display: wpSettings && !wpFormData.wordpress_app_password ? "none" : "block",
                     }}
-                    placeholder={wpSettings ? "Enter new password to update" : "e.g., xxxx xxxx xxxx xxxx xxxx xxxx"}
+                    placeholder="e.g., xxxx xxxx xxxx xxxx xxxx xxxx"
                   />
                 </div>
 

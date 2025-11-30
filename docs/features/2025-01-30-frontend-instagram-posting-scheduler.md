@@ -165,7 +165,7 @@ lib/api/
 **Form Validation:**
 - At least one image selected from each available category
 - Caption length ≤ 2,200 characters (show character count)
-- Scheduled time must be in the future (for "Schedule Later")
+- ~~Scheduled time must be in the future~~ (removed: users can select any time, backend handles past/present times by posting immediately)
 - Show inline error messages
 
 ## API Integration
@@ -1241,14 +1241,8 @@ export function InstagramSchedulingPage({
       return;
     }
 
-    // Validate scheduled time if scheduling
-    if (postingMode === "schedule") {
-      const scheduledDate = new Date(scheduledAt);
-      if (scheduledDate <= new Date()) {
-        setError("Scheduled time must be in the future");
-        return;
-      }
-    }
+    // Note: No validation for scheduled times being in the future.
+    // The backend handles past/present times by posting immediately.
 
     setIsSubmitting(true);
     setError(null);

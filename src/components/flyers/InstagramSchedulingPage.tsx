@@ -258,28 +258,8 @@ export function InstagramSchedulingPage({
       return;
     }
 
-    // Validate scheduled times if scheduling (only for newly selected images in UI)
-    if (selectedTimeDateImageId && timeDatePostingMode === "schedule") {
-      const scheduledDate = new Date(timeDateScheduledAt);
-      if (scheduledDate <= new Date()) {
-        setError("Time/Date image scheduled time must be in the future");
-        return;
-      }
-    }
-    if (selectedPerformersImageId && performersPostingMode === "schedule") {
-      const scheduledDate = new Date(performersScheduledAt);
-      if (scheduledDate <= new Date()) {
-        setError("Performers image scheduled time must be in the future");
-        return;
-      }
-    }
-    if (selectedLocationImageId && locationPostingMode === "schedule") {
-      const scheduledDate = new Date(locationScheduledAt);
-      if (scheduledDate <= new Date()) {
-        setError("Location image scheduled time must be in the future");
-        return;
-      }
-    }
+    // Note: No validation for scheduled times being in the future.
+    // The backend handles past/present times by posting immediately.
 
     setIsSubmitting(true);
     setError(null);

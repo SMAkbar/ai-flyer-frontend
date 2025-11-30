@@ -234,7 +234,8 @@ export function PostingOptionsCard({
               value={scheduledAt}
               onChange={onScheduledAtChange}
               disabled={disabled || isSubmitting}
-              min={new Date().toISOString()} // Prevent past dates
+              // No min prop: users can select any date/time.
+              // The backend handles past/present times by posting immediately.
             />
           </div>
         )}
