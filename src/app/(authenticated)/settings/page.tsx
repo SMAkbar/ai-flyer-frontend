@@ -332,14 +332,13 @@ export default function SettingsPage() {
   // =============================================================================
 
   // Check if OAuth button should be shown
-  // Show button if required fields are filled (either in saved settings or form data)
+  // Show button if Meta App ID and Meta App Secret are filled (Instagram User ID not required)
   const shouldShowOAuthButton = () => {
     // Check if we have the required fields in either settings or formData
     const hasAppId = settings?.meta_app_id || formData.meta_app_id;
     const hasAppSecret = settings?.meta_app_secret || formData.meta_app_secret;
-    const hasInstagramUserId = settings?.instagram_user_id || formData.instagram_user_id;
     
-    return hasAppId && hasAppSecret && hasInstagramUserId;
+    return hasAppId && hasAppSecret;
   };
   
   // Check if we should show "Connect" (no token) vs "Reconnect" (has token)
