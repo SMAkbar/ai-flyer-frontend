@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { tokens } from "@/components/theme/tokens";
 import { instagramApi, type ScheduledPostWithFlyerRead } from "@/lib/api/instagram";
-import { ExternalLinkIcon } from "@/components/icons";
 
 type ScheduleItemProps = {
   post: ScheduledPostWithFlyerRead;
@@ -77,15 +76,6 @@ export function ScheduleItem({ post, onCancel }: ScheduleItemProps) {
       return;
     }
     router.push(`/flyers/${post.flyer_id}`);
-  }
-
-  function handleViewInstagram() {
-    if (post.instagram_post_id) {
-      window.open(
-        `https://www.instagram.com/p/${post.instagram_post_id}/`,
-        "_blank"
-      );
-    }
   }
 
   const scheduledDate = post.scheduled_at
@@ -268,23 +258,6 @@ export function ScheduleItem({ post, onCancel }: ScheduleItemProps) {
               disabled={isCanceling}
             >
               {isCanceling ? "Canceling..." : "Cancel"}
-            </Button>
-          )}
-          {post.post_status === "posted" && post.instagram_post_id && (
-            <Button
-              variant="secondary"
-              onClick={handleViewInstagram}
-            >
-              <span
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "4px",
-                }}
-              >
-                View on Instagram
-                <ExternalLinkIcon size={14} />
-              </span>
             </Button>
           )}
         </div>
