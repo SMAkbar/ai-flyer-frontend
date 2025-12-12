@@ -25,7 +25,7 @@ export function PostStatusBadge({ status }: PostStatusBadgeProps) {
         };
       case "posting":
         return {
-          label: "Posting...",
+          label: "Processing...",
           color: "#f59e0b",
           bgColor: "#f59e0b20",
         };

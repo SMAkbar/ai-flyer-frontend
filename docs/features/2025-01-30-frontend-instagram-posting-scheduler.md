@@ -1169,8 +1169,8 @@ export function InstagramSchedulingPage({
       parts.push(extraction.event_title);
     }
 
-    if (extraction.event_date_time) {
-      parts.push(`📅 ${extraction.event_date_time}`);
+    if (extraction.event_date) {
+      parts.push(`📅 ${extraction.event_date}`);
     }
 
     if (extraction.location_town_city) {

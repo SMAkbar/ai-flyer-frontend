@@ -436,7 +436,7 @@ export function CreateFlyerForm({ onSubmit, onCancel, isLoading }: CreateFlyerFo
                     strokeLinecap="round"
                   />
                 </svg>
-                Uploading...
+                Extracting Information...
               </span>
             ) : (
               <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -454,7 +454,7 @@ export function CreateFlyerForm({ onSubmit, onCancel, isLoading }: CreateFlyerFo
                   <polyline points="17,8 12,3 7,8" />
                   <line x1="12" y1="3" x2="12" y2="15" />
                 </svg>
-                {images.length > 1 ? `Upload ${images.length} Flyers` : "Create Flyer"}
+                Extract Information
               </span>
             )}
           </Button>

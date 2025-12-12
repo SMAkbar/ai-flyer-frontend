@@ -3,9 +3,12 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { PostStatusBadge } from "@/components/flyers/PostStatusBadge";
 import { tokens } from "@/components/theme/tokens";
 import { ImageIcon, ExternalLinkIcon, ClockIcon } from "@/components/icons";
-import type { FlyerRead } from "@/lib/api/flyers";
+import type { FlyerRead, ExtractionStatus } from "@/lib/api/flyers";
+import type { PostStatus } from "@/lib/api/instagram";
 
 type FlyerCardProps = {
   flyer: FlyerRead;
@@ -141,6 +144,35 @@ export function FlyerCard({ flyer }: FlyerCardProps) {
           >
             {flyer.description}
           </p>
+        )}
+        {/* Status Badges */}
+        {(flyer.extraction_status || flyer.carousel_post_status) && (
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "8px",
+              marginBottom: "12px",
+            }}
+          >
+            {flyer.extraction_status && (
+              <StatusBadge
+                status={flyer.extraction_status as "pending" | "processing" | "completed" | "failed"}
+                label={
+                  flyer.extraction_status === "processing"
+                    ? "Extracting..."
+                    : flyer.extraction_status === "completed"
+                    ? "Extracted"
+                    : flyer.extraction_status === "failed"
+                    ? "Extraction Failed"
+                    : "Pending Extraction"
+                }
+              />
+            )}
+            {flyer.carousel_post_status && (
+              <PostStatusBadge status={flyer.carousel_post_status as PostStatus} />
+            )}
+          </div>
         )}
         <div
           style={{

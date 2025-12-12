@@ -55,6 +55,44 @@ export type AllScheduledPostsResponse = {
   scheduled_posts: ScheduledPostWithFlyerRead[];
 };
 
+// Carousel post types
+export type SelectCarouselRequest = {
+  time_date_image_id: number;
+  performers_image_id: number | null;  // null means use original flyer image
+  location_image_id: number;
+};
+
+export type ScheduleCarouselRequest = {
+  time_date_image_id: number;
+  performers_image_id: number | null;  // null means use original flyer image
+  location_image_id: number;
+  scheduled_at: string; // ISO 8601 datetime
+  caption: string | null;
+  hashtags: string | null;
+};
+
+export type InstagramCarouselPostRead = {
+  id: number;
+  flyer_id: number;
+  time_date_image_id: number;
+  performers_image_id: number | null;  // null means using original flyer image
+  location_image_id: number;
+  post_status: PostStatus;
+  instagram_post_id: string | null;
+  post_error: string | null;
+  caption: string | null;
+  hashtags: string | null;
+  scheduled_at: string | null;
+  posted_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SelectCarouselResponse = {
+  flyer_id: number;
+  carousel_post: InstagramCarouselPostRead;
+};
+
 export const instagramApi = {
   selectImages: (flyerId: number, data: SelectImagesRequest) =>
     apiClient.post<SelectImagesResponse>(
@@ -87,5 +125,26 @@ export const instagramApi = {
 
   getAllScheduledPosts: () =>
     apiClient.get<AllScheduledPostsResponse>("/instagram/scheduled"),
+
+  // Carousel post methods
+  selectCarousel: (flyerId: number, data: SelectCarouselRequest) =>
+    apiClient.post<SelectCarouselResponse>(
+      `/flyers/${flyerId}/instagram/select-carousel`,
+      data
+    ),
+
+  scheduleCarousel: (flyerId: number, data: ScheduleCarouselRequest) =>
+    apiClient.post<InstagramCarouselPostRead>(
+      `/flyers/${flyerId}/instagram/schedule-carousel`,
+      data
+    ),
+
+  getCarousel: (flyerId: number) =>
+    apiClient.get<InstagramCarouselPostRead>(
+      `/flyers/${flyerId}/instagram/carousel`
+    ),
+
+  cancelCarousel: (flyerId: number) =>
+    apiClient.del(`/flyers/${flyerId}/instagram/carousel`),
 };
 

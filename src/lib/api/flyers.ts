@@ -1,4 +1,5 @@
 import { apiClient } from "./client";
+import type { PostStatus } from "./instagram";
 
 export type FlyerRead = {
   id: number;
@@ -7,6 +8,8 @@ export type FlyerRead = {
   cloudfront_url: string;
   s3_key: string;
   created_at: string;
+  extraction_status?: ExtractionStatus | null;
+  carousel_post_status?: PostStatus | null;
 };
 
 export type ExtractionStatus = "pending" | "processing" | "completed" | "failed";
@@ -15,7 +18,7 @@ export type FlyerInformationExtraction = {
   id: number;
   flyer_id: number;
   status: ExtractionStatus;
-  event_date_time: string | null;
+  event_date: string | null;
   location_town_city: string | null;
   event_title: string | null;
   performers_djs_soundsystems: string | null;
@@ -49,7 +52,7 @@ export type FlyerDetailRead = FlyerRead & {
 };
 
 export type FlyerInformationExtractionUpdate = {
-  event_date_time?: string | null;
+  event_date?: string | null;
   location_town_city?: string | null;
   event_title?: string | null;
   performers_djs_soundsystems?: string | null;
@@ -63,7 +66,7 @@ export type BulkFlyerCreateResponse = {
 };
 
 export const flyersApi = {
-  getAll: () => apiClient.get<FlyerRead[]>("/flyers"),
+  getAll: () => apiClient.get<FlyerRead[]>("/flyers"), // Returns FlyerRead with extraction_status and carousel_post_status
   getById: (id: number) => apiClient.get<FlyerDetailRead>(`/flyers/${id}`),
   create: (formData: FormData) => apiClient.postForm<FlyerRead>("/flyers", formData),
   createBulk: (formData: FormData) => apiClient.postForm<BulkFlyerCreateResponse>("/flyers/bulk", formData),

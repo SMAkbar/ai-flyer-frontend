@@ -42,7 +42,7 @@ export function normalizeConfidence(confidenceLevel: string | null | undefined):
 export function shouldAutoGenerateImages(
   fieldConfidenceLevels: Record<string, string | null> | null | undefined,
   fieldValues: {
-    event_date_time?: string | null;
+    event_date?: string | null;
     location_town_city?: string | null;
     event_title?: string | null;
     performers_djs_soundsystems?: string | null;
@@ -53,7 +53,7 @@ export function shouldAutoGenerateImages(
   if (fieldConfidenceLevels) {
     // List of fields to check (only those with data)
     const fieldsToCheck = [
-      "event_date_time",
+      "event_date",
       "location_town_city",
       "event_title",
       "performers_djs_soundsystems",

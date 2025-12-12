@@ -7,10 +7,12 @@ import { Container } from "@/components/ui/Container";
 import { BackButton } from "@/components/ui/BackButton";
 import { Button } from "@/components/ui/Button";
 import { flyersApi, type FlyerDetailRead } from "@/lib/api/flyers";
+import { wordpressApi, type WordPressPostRead } from "@/lib/api/wordpress";
 import { FlyerImageCard } from "@/components/flyers/FlyerImageCard";
 import { FlyerHeader } from "@/components/flyers/FlyerHeader";
 import { ExtractionCard } from "@/components/flyers/ExtractionCard";
 import { GeneratedImagesSection } from "@/components/flyers/GeneratedImagesSection";
+import { WordPressPostingCard } from "@/components/flyers/WordPressPostingCard";
 
 export default function FlyerDetailPage() {
   const params = useParams();
@@ -24,11 +26,14 @@ export default function FlyerDetailPage() {
   const [editingValue, setEditingValue] = useState<string>("");
   const [isUpdating, setIsUpdating] = useState(false);
   const [isGeneratingImages, setIsGeneratingImages] = useState(false);
+  const [showWordPressPosting, setShowWordPressPosting] = useState(false);
+  const [wordpressPost, setWordpressPost] = useState<WordPressPostRead | null>(null);
   const pollingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (flyerId) {
       loadFlyer();
+      loadWordPressPost();
     }
     
     // Cleanup polling timeout on unmount
@@ -38,6 +43,19 @@ export default function FlyerDetailPage() {
       }
     };
   }, [flyerId]);
+
+  async function loadWordPressPost() {
+    if (!flyerId) return;
+
+    try {
+      const result = await wordpressApi.getPost(flyerId);
+      if (result.ok && result.data) {
+        setWordpressPost(result.data);
+      }
+    } catch (err) {
+      // Ignore errors - WordPress post may not exist
+    }
+  }
 
   async function loadFlyer() {
     if (!flyerId) return;
@@ -253,14 +271,39 @@ export default function FlyerDetailPage() {
                   isGenerating={isGeneratingImages}
                 />
                 {flyer.generated_images && flyer.generated_images.length > 0 && (
-                  <div style={{ marginTop: "24px" }}>
+                  <div style={{ marginTop: "24px", display: "flex", gap: "16px", flexWrap: "wrap" }}>
                     <Button
                       onClick={() => router.push(`/flyers/${flyer.id}/instagram`)}
                       variant="primary"
                     >
                       Schedule Instagram Posts
                     </Button>
+                    <Button
+                      onClick={() => setShowWordPressPosting(true)}
+                      variant="secondary"
+                    >
+                      {wordpressPost?.post_status === "posted" 
+                        ? "View WordPress Post" 
+                        : wordpressPost?.post_status === "scheduled"
+                        ? "WordPress Scheduled"
+                        : "Post to WordPress"}
+                    </Button>
                   </div>
+                )}
+                
+                {/* WordPress Posting Modal/Card */}
+                {showWordPressPosting && (
+                  <WordPressPostingCard
+                    flyerId={flyer.id}
+                    flyerTitle={flyer.title}
+                    flyerImageUrl={flyer.cloudfront_url}
+                    existingPost={wordpressPost}
+                    onClose={() => setShowWordPressPosting(false)}
+                    onPostUpdated={(post) => {
+                      setWordpressPost(post);
+                      loadWordPressPost();
+                    }}
+                  />
                 )}
               </div>
             )}

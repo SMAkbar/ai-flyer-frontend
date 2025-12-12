@@ -12,7 +12,7 @@ import { CubeIcon, CheckIcon, WarningIcon, ClockIcon, ImageIcon } from '@/compon
 
 export type ExtractionData = {
   status: 'completed' | 'processing' | 'failed' | 'pending';
-  event_date_time?: string | null;
+  event_date?: string | null;
   location_town_city?: string | null;
   event_title?: string | null;
   venue_name?: string | null;
@@ -280,19 +280,19 @@ export function ExtractionCard({
                   <FieldLabel>Event Date/Time</FieldLabel>
                   <ConfidenceBadge
                     status={getFieldConfidenceStatus(
-                      extraction.event_date_time,
-                      extraction.field_confidence_levels?.event_date_time
+                      extraction.event_date,
+                      extraction.field_confidence_levels?.event_date
                     )}
-                    confidence={extraction.field_confidence_levels?.event_date_time}
+                    confidence={extraction.field_confidence_levels?.event_date}
                   />
                 </div>
                 <EditableField
-                  value={extraction.event_date_time ?? null}
-                  isEditing={editingField === 'event_date_time'}
+                  value={extraction.event_date ?? null}
+                  isEditing={editingField === 'event_date'}
                   editingValue={editingValue}
-                  onEdit={() => onFieldEdit('event_date_time', extraction.event_date_time ?? null)}
+                  onEdit={() => onFieldEdit('event_date', extraction.event_date ?? null)}
                   onChange={onFieldChange}
-                  onSave={() => onFieldSave('event_date_time')}
+                  onSave={() => onFieldSave('event_date')}
                   onCancel={onFieldCancel}
                   disabled={isUpdating}
                 />
