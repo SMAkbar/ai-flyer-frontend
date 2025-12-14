@@ -15,7 +15,7 @@ import { tokens } from "@/components/theme/tokens";
 const POLLING_INTERVAL = 5000; // 5 seconds
 
 type SortOption = "latest" | "oldest";
-type FilterStatus = "all" | ExtractionStatus;
+type FilterStatus = "all" | ExtractionStatus | "posted" | "extracted";
 
 export default function FlyersPage() {
   const router = useRouter();
@@ -99,7 +99,28 @@ export default function FlyersPage() {
 
     // Apply status filter
     if (filterStatus !== "all") {
-      filtered = filtered.filter((flyer) => flyer.extraction_status === filterStatus);
+      if (filterStatus === "posted") {
+        // Show only posted flyers
+        filtered = filtered.filter((flyer) => flyer.carousel_post_status === "posted");
+      } else if (filterStatus === "extracted") {
+        // Extracted: completed extraction, NOT posted and NOT failed (posting)
+        filtered = filtered.filter(
+          (flyer) =>
+            flyer.extraction_status === "completed" &&
+            flyer.carousel_post_status !== "posted" &&
+            flyer.carousel_post_status !== "failed"
+        );
+      } else if (filterStatus === "failed") {
+        // Failed: extraction failed OR posting failed
+        filtered = filtered.filter(
+          (flyer) =>
+            flyer.extraction_status === "failed" ||
+            flyer.carousel_post_status === "failed"
+        );
+      } else {
+        // Other extraction statuses (pending, processing)
+        filtered = filtered.filter((flyer) => flyer.extraction_status === filterStatus);
+      }
     }
 
     // Apply search filter
@@ -154,105 +175,83 @@ export default function FlyersPage() {
       <div
         style={{
           display: "flex",
-          gap: "16px",
+          gap: "12px",
           marginBottom: "24px",
           flexWrap: "wrap",
-          alignItems: "center",
+          alignItems: "stretch",
         }}
       >
         {/* Search Input */}
         <div
           style={{
             flex: "1",
-            minWidth: "200px",
+            minWidth: "240px",
             maxWidth: "400px",
+            position: "relative",
           }}
         >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke={tokens.textMuted}
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{
+              position: "absolute",
+              left: "12px",
+              top: "50%",
+              transform: "translateY(-50%)",
+              pointerEvents: "none",
+            }}
+          >
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.35-4.35" />
+          </svg>
           <input
             type="text"
-            placeholder="Search flyers by title, description, event details..."
+            placeholder="Search flyers..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{
               width: "100%",
-              padding: "10px 14px",
+              padding: "10px 14px 10px 40px",
               fontSize: "14px",
               backgroundColor: tokens.bgElevated,
               color: tokens.textPrimary,
               border: `1px solid ${tokens.border}`,
               borderRadius: "8px",
               outline: "none",
-              transition: "border-color 0.2s ease",
+              transition: "border-color 0.2s ease, box-shadow 0.2s ease",
             }}
             onFocus={(e) => {
               e.target.style.borderColor = tokens.accent;
+              e.target.style.boxShadow = `0 0 0 3px ${tokens.accent}20`;
             }}
             onBlur={(e) => {
               e.target.style.borderColor = tokens.border;
+              e.target.style.boxShadow = "none";
             }}
           />
         </div>
 
-        {/* Status Filter */}
+        {/* Filters Group */}
         <div
           style={{
             display: "flex",
-            flexDirection: "column",
-            gap: "4px",
+            gap: "8px",
+            alignItems: "center",
+            marginLeft: "auto",
           }}
         >
-          <label
-            style={{
-              fontSize: "12px",
-              fontWeight: 600,
-              color: tokens.textSecondary,
-            }}
-          >
-            Filter by Status
-          </label>
+          {/* Status Filter */}
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value as FilterStatus)}
             style={{
-              padding: "8px 12px",
-              borderRadius: "6px",
-              border: `1px solid ${tokens.border}`,
-              backgroundColor: tokens.bgElevated,
-              color: tokens.textPrimary,
-              fontSize: "14px",
-              cursor: "pointer",
-            }}
-          >
-            <option value="all">All</option>
-            <option value="pending">Pending</option>
-            <option value="processing">Processing</option>
-            <option value="completed">Completed</option>
-            <option value="failed">Failed</option>
-          </select>
-        </div>
-
-        {/* Sort Dropdown */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-          }}
-        >
-          <label
-            style={{
-              fontSize: "14px",
-              color: tokens.textSecondary,
-              fontWeight: 500,
-            }}
-          >
-            Sort:
-          </label>
-          <select
-            value={sortOption}
-            onChange={(e) => setSortOption(e.target.value as SortOption)}
-            style={{
-              padding: "10px 14px",
+              padding: "10px 32px 10px 14px",
               fontSize: "14px",
               backgroundColor: tokens.bgElevated,
               color: tokens.textPrimary,
@@ -260,16 +259,67 @@ export default function FlyersPage() {
               borderRadius: "8px",
               outline: "none",
               cursor: "pointer",
-              transition: "border-color 0.2s ease",
+              transition: "border-color 0.2s ease, box-shadow 0.2s ease",
+              appearance: "none",
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "right 12px center",
             }}
             onFocus={(e) => {
               e.target.style.borderColor = tokens.accent;
+              e.target.style.boxShadow = `0 0 0 3px ${tokens.accent}20`;
             }}
             onBlur={(e) => {
               e.target.style.borderColor = tokens.border;
+              e.target.style.boxShadow = "none";
             }}
           >
-            <option value="latest">Latest First</option>
+            <option value="all">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="processing">Processing</option>
+            <option value="extracted">Extracted</option>
+            <option value="posted">Posted</option>
+            <option value="failed">Failed</option>
+          </select>
+
+          {/* Divider */}
+          <div
+            style={{
+              width: "1px",
+              height: "24px",
+              backgroundColor: tokens.border,
+            }}
+          />
+
+          {/* Sort Dropdown */}
+          <select
+            value={sortOption}
+            onChange={(e) => setSortOption(e.target.value as SortOption)}
+            style={{
+              padding: "10px 32px 10px 14px",
+              fontSize: "14px",
+              backgroundColor: tokens.bgElevated,
+              color: tokens.textPrimary,
+              border: `1px solid ${tokens.border}`,
+              borderRadius: "8px",
+              outline: "none",
+              cursor: "pointer",
+              transition: "border-color 0.2s ease, box-shadow 0.2s ease",
+              appearance: "none",
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "right 12px center",
+            }}
+            onFocus={(e) => {
+              e.target.style.borderColor = tokens.accent;
+              e.target.style.boxShadow = `0 0 0 3px ${tokens.accent}20`;
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = tokens.border;
+              e.target.style.boxShadow = "none";
+            }}
+          >
+            <option value="latest">Newest First</option>
             <option value="oldest">Oldest First</option>
           </select>
         </div>
