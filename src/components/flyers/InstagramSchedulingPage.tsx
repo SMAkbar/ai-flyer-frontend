@@ -54,30 +54,34 @@ export function InstagramSchedulingPage({
 
   // Auto-generate caption from extraction data
   function generateDefaultCaption() {
-    if (!flyer.information_extraction) return;
-
-    const extraction = flyer.information_extraction;
     const parts: string[] = [];
 
-    if (extraction.event_title) {
-      parts.push(extraction.event_title);
+    if (flyer.information_extraction) {
+      const extraction = flyer.information_extraction;
+
+      if (extraction.event_title) {
+        parts.push(extraction.event_title);
+      }
+
+      if (extraction.event_date) {
+        parts.push(`📅 ${extraction.event_date}`);
+      }
+
+      if (extraction.location_town_city) {
+        parts.push(`📍 ${extraction.location_town_city}`);
+      }
+
+      if (extraction.venue_name) {
+        parts.push(`🏢 ${extraction.venue_name}`);
+      }
+
+      if (extraction.performers_djs_soundsystems) {
+        parts.push(`🎵 ${extraction.performers_djs_soundsystems}`);
+      }
     }
 
-    if (extraction.event_date) {
-      parts.push(`📅 ${extraction.event_date}`);
-    }
-
-    if (extraction.location_town_city) {
-      parts.push(`📍 ${extraction.location_town_city}`);
-    }
-
-    if (extraction.venue_name) {
-      parts.push(`🏢 ${extraction.venue_name}`);
-    }
-
-    if (extraction.performers_djs_soundsystems) {
-      parts.push(`🎵 ${extraction.performers_djs_soundsystems}`);
-    }
+    // Always add collaboration credit at the end
+    parts.push("Proudly promoting dub events in collaboration with @dubcentralsoundsystem 🤝🔊");
 
     setCaption(parts.join("\n\n"));
   }
