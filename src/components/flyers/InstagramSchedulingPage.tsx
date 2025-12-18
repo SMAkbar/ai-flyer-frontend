@@ -348,6 +348,7 @@ export function InstagramSchedulingPage({
                 overflow: "hidden",
                 border: `3px solid ${tokens.accent}`,
                 boxShadow: `0 0 0 3px ${tokens.accent}40`,
+                backgroundColor: "#000",
               }}
             >
               <img
@@ -356,7 +357,7 @@ export function InstagramSchedulingPage({
                 style={{
                   width: "100%",
                   height: "100%",
-                  objectFit: "cover",
+                  objectFit: "contain",
                 }}
               />
               <div

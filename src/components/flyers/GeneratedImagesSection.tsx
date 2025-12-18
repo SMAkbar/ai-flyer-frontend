@@ -35,12 +35,22 @@ export function GeneratedImagesSection({
             fontSize: "20px",
             fontWeight: 600,
             color: tokens.textPrimary,
-            marginBottom: "16px",
+            marginBottom: "8px",
             letterSpacing: "-0.01em",
           }}
         >
           Generated Promotional Images
         </h2>
+        <p
+          style={{
+            fontSize: "13px",
+            color: tokens.textMuted,
+            margin: "0 0 16px 0",
+            fontStyle: "italic",
+          }}
+        >
+          The original flyer will be used as the third image in the carousel.
+        </p>
         <div
           style={{
             display: "grid",
@@ -48,7 +58,7 @@ export function GeneratedImagesSection({
             gap: "20px",
           }}
         >
-          {[1, 2, 3].map((i) => (
+          {[1, 2].map((i) => (
             <div
               key={i}
               style={{
@@ -184,7 +194,7 @@ export function GeneratedImagesSection({
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          marginBottom: "20px",
+          marginBottom: "8px",
         }}
       >
         <h2
@@ -211,6 +221,16 @@ export function GeneratedImagesSection({
           {sortedImages.length} {sortedImages.length === 1 ? "image" : "images"}
         </div>
       </div>
+      <p
+        style={{
+          fontSize: "13px",
+          color: tokens.textMuted,
+          margin: "0 0 16px 0",
+          fontStyle: "italic",
+        }}
+      >
+        The original flyer will be used as the third image in the carousel.
+      </p>
       <div
         style={{
           display: "grid",

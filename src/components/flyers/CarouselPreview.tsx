@@ -95,6 +95,8 @@ export function CarouselPreview({
         >
           {images.map((item, index) => {
             if (!item.image) return null;
+            // Use "contain" for original flyer (performers type with id 0) to show full image
+            const isOriginalFlyer = item.type === "performers" && item.image.id === 0;
             return (
               <div
                 key={`${item.type}-${item.image.id}`}
@@ -114,7 +116,7 @@ export function CarouselPreview({
                     borderRadius: "12px",
                     overflow: "hidden",
                     border: `2px solid ${tokens.border}`,
-                    backgroundColor: tokens.bgHover,
+                    backgroundColor: isOriginalFlyer ? "#000" : tokens.bgHover,
                   }}
                 >
                   {item.image.cloudfront_url ? (
@@ -124,7 +126,7 @@ export function CarouselPreview({
                       style={{
                         width: "100%",
                         height: "100%",
-                        objectFit: "cover",
+                        objectFit: isOriginalFlyer ? "contain" : "cover",
                       }}
                     />
                   ) : (

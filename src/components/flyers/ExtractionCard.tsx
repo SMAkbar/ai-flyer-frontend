@@ -3,12 +3,12 @@ import React from 'react';
 import { Card } from '@/components/ui/Card';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { FieldLabel } from '@/components/ui/FieldLabel';
-import { EditableField } from '@/components/ui/EditableField';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { tokens } from '@/components/theme/tokens';
-import { CubeIcon, CheckIcon, WarningIcon, ClockIcon, ImageIcon } from '@/components/icons';
+import { CubeIcon, CheckIcon, WarningIcon, ClockIcon, ImageIcon, SaveIcon, LoaderIcon } from '@/components/icons';
 
 export type ExtractionData = {
   status: 'completed' | 'processing' | 'failed' | 'pending';
@@ -22,15 +22,23 @@ export type ExtractionData = {
   error_message?: string | null;
 };
 
+// Type for edited field values
+export type EditedFields = {
+  event_date?: string;
+  location_town_city?: string;
+  event_title?: string;
+  venue_name?: string;
+  performers_djs_soundsystems?: string;
+};
+
 export type ExtractionCardProps = {
   extraction: ExtractionData | null;
-  editingField: string | null;
-  editingValue: string;
+  editedFields: EditedFields;
   isUpdating: boolean;
-  onFieldEdit: (fieldName: string, currentValue: string | null) => void;
-  onFieldChange: (value: string) => void;
-  onFieldSave: (fieldName: string) => void;
-  onFieldCancel: () => void;
+  onFieldChange: (fieldName: keyof EditedFields, value: string) => void;
+  onSaveAll: () => void;
+  onCancelEdits: () => void;
+  hasUnsavedChanges: boolean;
   onGenerateImages?: () => void;
   isGeneratingImages?: boolean;
   hasGeneratedImages?: boolean;
@@ -153,15 +161,72 @@ function ConfidenceBadge({
   );
 }
 
+// Inline editable field component for multi-field editing
+function InlineEditableField({
+  fieldName,
+  value,
+  editedValue,
+  placeholder = 'Not specified',
+  onChange,
+  disabled = false,
+}: {
+  fieldName: keyof EditedFields;
+  value: string | null | undefined;
+  editedValue: string | undefined;
+  placeholder?: string;
+  onChange: (fieldName: keyof EditedFields, value: string) => void;
+  disabled?: boolean;
+}) {
+  // Use edited value if available, otherwise use original value
+  const displayValue = editedValue !== undefined ? editedValue : (value ?? '');
+  const isModified = editedValue !== undefined && editedValue !== (value ?? '');
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <Input
+        type="text"
+        value={displayValue}
+        onChange={(e) => onChange(fieldName, e.target.value)}
+        placeholder={placeholder}
+        disabled={disabled}
+        style={{
+          fontSize: '16px',
+          fontWeight: 500,
+          padding: '8px 12px',
+          backgroundColor: tokens.bgElevated,
+          borderColor: isModified ? tokens.accent : tokens.border,
+          boxShadow: isModified ? `0 0 0 1px ${tokens.accent}40` : 'none',
+        }}
+      />
+      {isModified && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '-6px',
+            right: '8px',
+            fontSize: '10px',
+            fontWeight: 600,
+            color: tokens.accent,
+            backgroundColor: tokens.bgElevated,
+            padding: '1px 6px',
+            borderRadius: '4px',
+          }}
+        >
+          Modified
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ExtractionCard({
   extraction,
-  editingField,
-  editingValue,
+  editedFields,
   isUpdating,
-  onFieldEdit,
   onFieldChange,
-  onFieldSave,
-  onFieldCancel,
+  onSaveAll,
+  onCancelEdits,
+  hasUnsavedChanges,
   onGenerateImages,
   isGeneratingImages = false,
   hasGeneratedImages = false,
@@ -286,14 +351,12 @@ export function ExtractionCard({
                     confidence={extraction.field_confidence_levels?.event_date}
                   />
                 </div>
-                <EditableField
-                  value={extraction.event_date ?? null}
-                  isEditing={editingField === 'event_date'}
-                  editingValue={editingValue}
-                  onEdit={() => onFieldEdit('event_date', extraction.event_date ?? null)}
+                <InlineEditableField
+                  fieldName="event_date"
+                  value={extraction.event_date}
+                  editedValue={editedFields.event_date}
+                  placeholder="Enter event date/time"
                   onChange={onFieldChange}
-                  onSave={() => onFieldSave('event_date')}
-                  onCancel={onFieldCancel}
                   disabled={isUpdating}
                 />
               </div>
@@ -309,16 +372,12 @@ export function ExtractionCard({
                     confidence={extraction.field_confidence_levels?.performers_djs_soundsystems}
                   />
                 </div>
-                <EditableField
-                  value={extraction.performers_djs_soundsystems ?? null}
-                  isEditing={editingField === 'performers_djs_soundsystems'}
-                  editingValue={editingValue}
-                  onEdit={() =>
-                    onFieldEdit('performers_djs_soundsystems', extraction.performers_djs_soundsystems ?? null)
-                  }
+                <InlineEditableField
+                  fieldName="performers_djs_soundsystems"
+                  value={extraction.performers_djs_soundsystems}
+                  editedValue={editedFields.performers_djs_soundsystems}
+                  placeholder="Enter performers, DJs, or soundsystems"
                   onChange={onFieldChange}
-                  onSave={() => onFieldSave('performers_djs_soundsystems')}
-                  onCancel={onFieldCancel}
                   disabled={isUpdating}
                 />
               </div>
@@ -334,14 +393,12 @@ export function ExtractionCard({
                     confidence={extraction.field_confidence_levels?.location_town_city}
                   />
                 </div>
-                <EditableField
-                  value={extraction.location_town_city ?? null}
-                  isEditing={editingField === 'location_town_city'}
-                  editingValue={editingValue}
-                  onEdit={() => onFieldEdit('location_town_city', extraction.location_town_city ?? null)}
+                <InlineEditableField
+                  fieldName="location_town_city"
+                  value={extraction.location_town_city}
+                  editedValue={editedFields.location_town_city}
+                  placeholder="Enter location (town/city)"
                   onChange={onFieldChange}
-                  onSave={() => onFieldSave('location_town_city')}
-                  onCancel={onFieldCancel}
                   disabled={isUpdating}
                 />
               </div>
@@ -361,56 +418,92 @@ export function ExtractionCard({
                   confidence={extraction.field_confidence_levels?.event_title}
                 />
               </div>
-              <EditableField
-                value={extraction.event_title ?? null}
-                isEditing={editingField === 'event_title'}
-                editingValue={editingValue}
-                onEdit={() => onFieldEdit('event_title', extraction.event_title ?? null)}
+              <InlineEditableField
+                fieldName="event_title"
+                value={extraction.event_title}
+                editedValue={editedFields.event_title}
+                placeholder="Enter event title"
                 onChange={onFieldChange}
-                onSave={() => onFieldSave('event_title')}
-                onCancel={onFieldCancel}
                 disabled={isUpdating}
               />
             </div>
 
-            {extraction.venue_name && (
-              <div>
-                <div
-                  style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}
-                >
-                  <FieldLabel>Venue</FieldLabel>
-                  <ConfidenceBadge
-                    status={getFieldConfidenceStatus(
-                      extraction.venue_name,
-                      extraction.field_confidence_levels?.venue_name
-                    )}
-                    confidence={extraction.field_confidence_levels?.venue_name}
-                  />
-                </div>
-                <div
-                  style={{
-                    fontSize: '16px',
-                    color: tokens.textPrimary,
-                    fontWeight: 500,
-                    padding: '8px 12px',
-                    backgroundColor: tokens.bgElevated,
-                    border: `1px solid ${tokens.border}`,
-                    borderRadius: '8px',
-                  }}
-                >
-                  {extraction.venue_name}
-                </div>
+            <div>
+              <div
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}
+              >
+                <FieldLabel>Venue</FieldLabel>
+                <ConfidenceBadge
+                  status={getFieldConfidenceStatus(
+                    extraction.venue_name,
+                    extraction.field_confidence_levels?.venue_name
+                  )}
+                  confidence={extraction.field_confidence_levels?.venue_name}
+                />
               </div>
-            )}
+              <InlineEditableField
+                fieldName="venue_name"
+                value={extraction.venue_name}
+                editedValue={editedFields.venue_name}
+                placeholder="Enter venue name"
+                onChange={onFieldChange}
+                disabled={isUpdating}
+              />
+            </div>
           </div>
 
+          {/* Save/Cancel Buttons - Show when there are unsaved changes */}
+          {hasUnsavedChanges && (
+            <div
+              style={{
+                marginTop: '24px',
+                paddingTop: '24px',
+                borderTop: `1px solid ${tokens.border}`,
+                display: 'flex',
+                gap: '12px',
+                justifyContent: 'flex-end',
+              }}
+            >
+              <Button
+                onClick={onCancelEdits}
+                variant="secondary"
+                disabled={isUpdating}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={onSaveAll}
+                variant="primary"
+                disabled={isUpdating}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                {isUpdating ? (
+                  <>
+                    <LoaderIcon size={16} />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <SaveIcon size={16} />
+                    Save Changes
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+
           {extraction.status === 'completed' && onGenerateImages && (
-            <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: `1px solid ${tokens.border}` }}>
+            <div style={{ marginTop: hasUnsavedChanges ? '16px' : '24px', paddingTop: hasUnsavedChanges ? '0' : '24px', borderTop: hasUnsavedChanges ? 'none' : `1px solid ${tokens.border}` }}>
               <Button
                 onClick={onGenerateImages}
                 variant="primary"
-                disabled={isGeneratingImages || isUpdating}
+                disabled={isGeneratingImages || isUpdating || hasUnsavedChanges}
                 style={{ width: '100%' }}
+                title={hasUnsavedChanges ? 'Save your changes before generating images' : undefined}
               >
                 {isGeneratingImages
                   ? 'Generating Images...'
@@ -418,6 +511,16 @@ export function ExtractionCard({
                   ? 'Regenerate Promotional Images'
                   : 'Generate Promotional Images'}
               </Button>
+              {hasUnsavedChanges && (
+                <p style={{ 
+                  fontSize: '13px', 
+                  color: tokens.warning, 
+                  marginTop: '8px', 
+                  textAlign: 'center' 
+                }}>
+                  Save your changes before generating images
+                </p>
+              )}
             </div>
           )}
         </div>
