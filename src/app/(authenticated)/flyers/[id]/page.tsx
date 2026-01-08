@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { PageLayout } from "@/components/ui/PageLayout";
 import { Container } from "@/components/ui/Container";
 import { BackButton } from "@/components/ui/BackButton";
@@ -13,6 +13,7 @@ import { FlyerHeader } from "@/components/flyers/FlyerHeader";
 import { ExtractionCard, type EditedFields } from "@/components/flyers/ExtractionCard";
 import { GeneratedImagesSection } from "@/components/flyers/GeneratedImagesSection";
 import { WordPressPostingCard } from "@/components/flyers/WordPressPostingCard";
+import { filterAndSortFlyers, type FilterStatus, type SortOption } from "@/lib/utils/flyerFilters";
 
 type AdjacentFlyers = {
   prev: FlyerRead | null;
@@ -22,7 +23,13 @@ type AdjacentFlyers = {
 export default function FlyerDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const flyerId = params?.id ? parseInt(params.id as string, 10) : null;
+
+  // Read filter params from URL, defaulting to "all", "", "latest"
+  const filterStatus = (searchParams.get("filter") as FilterStatus) || "all";
+  const searchQuery = searchParams.get("search") || "";
+  const sortOption = (searchParams.get("sort") as SortOption) || "latest";
 
   const [flyer, setFlyer] = useState<FlyerDetailRead | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -50,7 +57,7 @@ export default function FlyerDetailPage() {
         clearTimeout(pollingTimeoutRef.current);
       }
     };
-  }, [flyerId]);
+  }, [flyerId, filterStatus, searchQuery, sortOption]);
 
   async function loadAdjacentFlyers() {
     if (!flyerId) return;
@@ -58,14 +65,18 @@ export default function FlyerDetailPage() {
     try {
       const result = await flyersApi.getAll();
       if (result.ok) {
-        const flyers = result.data;
-        const currentIndex = flyers.findIndex((f) => f.id === flyerId);
+        // Apply the same filtering logic as the list page
+        const filteredFlyers = filterAndSortFlyers(result.data, filterStatus, searchQuery, sortOption);
+        const currentIndex = filteredFlyers.findIndex((f) => f.id === flyerId);
         
         if (currentIndex !== -1) {
           setAdjacentFlyers({
-            prev: currentIndex > 0 ? flyers[currentIndex - 1] : null,
-            next: currentIndex < flyers.length - 1 ? flyers[currentIndex + 1] : null,
+            prev: currentIndex > 0 ? filteredFlyers[currentIndex - 1] : null,
+            next: currentIndex < filteredFlyers.length - 1 ? filteredFlyers[currentIndex + 1] : null,
           });
+        } else {
+          // Current flyer not in filtered list, no adjacent flyers
+          setAdjacentFlyers({ prev: null, next: null });
         }
       }
     } catch (err) {
@@ -181,6 +192,39 @@ export default function FlyerDetailPage() {
     setEditedFields({});
   }, []);
 
+  // Helper function to build navigation URL with query params
+  const buildNavigationUrl = useCallback((flyerId: number) => {
+    const params = new URLSearchParams();
+    if (filterStatus !== "all") {
+      params.set("filter", filterStatus);
+    }
+    if (searchQuery.trim()) {
+      params.set("search", searchQuery);
+    }
+    if (sortOption !== "latest") {
+      params.set("sort", sortOption);
+    }
+    const queryString = params.toString();
+    return queryString ? `/flyers/${flyerId}?${queryString}` : `/flyers/${flyerId}`;
+  }, [filterStatus, searchQuery, sortOption]);
+
+  // Handler to navigate back to flyers page, preserving filter params
+  const handleBackToFlyers = useCallback(() => {
+    const params = new URLSearchParams();
+    if (filterStatus !== "all") {
+      params.set("filter", filterStatus);
+    }
+    if (searchQuery.trim()) {
+      params.set("search", searchQuery);
+    }
+    if (sortOption !== "latest") {
+      params.set("sort", sortOption);
+    }
+    const queryString = params.toString();
+    const url = queryString ? `/flyers?${queryString}` : `/flyers`;
+    router.push(url);
+  }, [router, filterStatus, searchQuery, sortOption]);
+
   const handleGenerateImages = async () => {
     if (!flyerId || !flyer?.information_extraction) return;
 
@@ -273,7 +317,7 @@ export default function FlyerDetailPage() {
           flexWrap: "wrap",
           gap: "12px"
         }}>
-          <BackButton />
+          <BackButton onClick={handleBackToFlyers} />
           
           {/* Flyer Navigation */}
           <div style={{ 
@@ -283,7 +327,7 @@ export default function FlyerDetailPage() {
           }}>
             {adjacentFlyers.prev && (
               <button
-                onClick={() => router.push(`/flyers/${adjacentFlyers.prev!.id}`)}
+                onClick={() => router.push(buildNavigationUrl(adjacentFlyers.prev!.id))}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -323,7 +367,7 @@ export default function FlyerDetailPage() {
             
             {adjacentFlyers.next && (
               <button
-                onClick={() => router.push(`/flyers/${adjacentFlyers.next!.id}`)}
+                onClick={() => router.push(buildNavigationUrl(adjacentFlyers.next!.id))}
                 style={{
                   display: "flex",
                   alignItems: "center",

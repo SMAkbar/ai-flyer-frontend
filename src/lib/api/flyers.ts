@@ -75,5 +75,6 @@ export const flyersApi = {
     apiClient.patch<FlyerInformationExtraction>(`/flyers/${id}/extraction`, data),
   generateImages: (id: number) =>
     apiClient.post<{ message: string }>(`/flyers/${id}/generate-images`, {}),
+  delete: (id: number) => apiClient.del<void>(`/flyers/${id}`),
 };
 

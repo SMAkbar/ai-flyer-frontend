@@ -32,6 +32,7 @@ export { MailIcon } from "./Mail";
 export { RefreshIcon } from "./Refresh";
 export { SaveIcon } from "./Save";
 export { SettingsIcon } from "./Settings";
+export { TrashIcon } from "./Trash";
 
 export type { IconProps } from "./types";
 

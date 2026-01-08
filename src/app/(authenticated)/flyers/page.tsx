@@ -11,11 +11,9 @@ import { FlyersGrid } from "@/components/flyers/FlyersGrid";
 import { PlusIcon } from "@/components/icons";
 import { flyersApi, type FlyerRead, type ExtractionStatus } from "@/lib/api/flyers";
 import { tokens } from "@/components/theme/tokens";
+import { filterAndSortFlyers, type FilterStatus, type SortOption } from "@/lib/utils/flyerFilters";
 
 const POLLING_INTERVAL = 5000; // 5 seconds
-
-type SortOption = "latest" | "oldest";
-type FilterStatus = "all" | ExtractionStatus | "posted" | "extracted";
 
 export default function FlyersPage() {
   const router = useRouter();
@@ -95,54 +93,7 @@ export default function FlyersPage() {
 
   // Filter and sort flyers
   const filteredAndSortedFlyers = useMemo(() => {
-    let filtered = flyers;
-
-    // Apply status filter
-    if (filterStatus !== "all") {
-      if (filterStatus === "posted") {
-        // Show only posted flyers
-        filtered = filtered.filter((flyer) => flyer.carousel_post_status === "posted");
-      } else if (filterStatus === "extracted") {
-        // Extracted: completed extraction, NOT posted and NOT failed (posting)
-        filtered = filtered.filter(
-          (flyer) =>
-            flyer.extraction_status === "completed" &&
-            flyer.carousel_post_status !== "posted" &&
-            flyer.carousel_post_status !== "failed"
-        );
-      } else if (filterStatus === "failed") {
-        // Failed: extraction failed OR posting failed
-        filtered = filtered.filter(
-          (flyer) =>
-            flyer.extraction_status === "failed" ||
-            flyer.carousel_post_status === "failed"
-        );
-      } else {
-        // Other extraction statuses (pending, processing)
-        filtered = filtered.filter((flyer) => flyer.extraction_status === filterStatus);
-      }
-    }
-
-    // Apply search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim();
-      filtered = filtered.filter((flyer) => {
-        const title = (flyer.title || "").toLowerCase();
-        const description = (flyer.description || "").toLowerCase();
-        return title.includes(query) || description.includes(query);
-      });
-    }
-
-    // Apply sorting
-    const sorted = [...filtered].sort((a, b) => {
-      if (sortOption === "latest") {
-        return b.id - a.id; // Descending (newest first)
-      } else {
-        return a.id - b.id; // Ascending (oldest first)
-      }
-    });
-
-    return sorted;
+    return filterAndSortFlyers(flyers, filterStatus, searchQuery, sortOption);
   }, [flyers, filterStatus, searchQuery, sortOption]);
 
   const processingCount = flyers.filter(
@@ -399,7 +350,13 @@ export default function FlyersPage() {
           description={`No flyers found matching "${searchQuery}". Try a different search term.`}
         />
       ) : (
-        <FlyersGrid flyers={filteredAndSortedFlyers} />
+        <FlyersGrid 
+          flyers={filteredAndSortedFlyers} 
+          onDelete={loadFlyers}
+          filterStatus={filterStatus}
+          searchQuery={searchQuery}
+          sortOption={sortOption}
+        />
       )}
     </PageLayout>
   );

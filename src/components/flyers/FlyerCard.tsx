@@ -6,18 +6,25 @@ import { Card } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { PostStatusBadge } from "@/components/flyers/PostStatusBadge";
 import { tokens } from "@/components/theme/tokens";
-import { ImageIcon, ExternalLinkIcon, ClockIcon } from "@/components/icons";
+import { ImageIcon, ExternalLinkIcon, ClockIcon, TrashIcon } from "@/components/icons";
+import { flyersApi } from "@/lib/api/flyers";
 import type { FlyerRead, ExtractionStatus } from "@/lib/api/flyers";
 import type { PostStatus } from "@/lib/api/instagram";
+import type { FilterStatus, SortOption } from "@/lib/utils/flyerFilters";
 
 type FlyerCardProps = {
   flyer: FlyerRead;
+  onDelete?: () => void;
+  filterStatus?: FilterStatus;
+  searchQuery?: string;
+  sortOption?: SortOption;
 };
 
-export function FlyerCard({ flyer }: FlyerCardProps) {
+export function FlyerCard({ flyer, onDelete, filterStatus = "all", searchQuery = "", sortOption = "latest" }: FlyerCardProps) {
   const router = useRouter();
   const [isHovered, setIsHovered] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -29,7 +36,41 @@ export function FlyerCard({ flyer }: FlyerCardProps) {
   };
 
   const handleClick = () => {
-    router.push(`/flyers/${flyer.id}`);
+    const params = new URLSearchParams();
+    if (filterStatus !== "all") {
+      params.set("filter", filterStatus);
+    }
+    if (searchQuery.trim()) {
+      params.set("search", searchQuery);
+    }
+    if (sortOption !== "latest") {
+      params.set("sort", sortOption);
+    }
+    const queryString = params.toString();
+    const url = queryString ? `/flyers/${flyer.id}?${queryString}` : `/flyers/${flyer.id}`;
+    router.push(url);
+  };
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click navigation
+    
+    if (!confirm(`Are you sure you want to delete "${flyer.title}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      const result = await flyersApi.delete(flyer.id);
+      if (result.ok) {
+        onDelete?.();
+      } else {
+        alert(result.error.message || "Failed to delete flyer");
+      }
+    } catch (err) {
+      alert("An unexpected error occurred");
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -113,6 +154,45 @@ export function FlyerCard({ flyer }: FlyerCardProps) {
             View Details
           </span>
         </div>
+        {/* Delete Button */}
+        <button
+          onClick={handleDelete}
+          disabled={isDeleting}
+          style={{
+            position: "absolute",
+            top: "12px",
+            left: "12px",
+            backgroundColor: `${tokens.danger}e6`,
+            backdropFilter: "blur(8px)",
+            borderRadius: "8px",
+            padding: "8px",
+            border: `1px solid ${tokens.danger}80`,
+            cursor: isDeleting ? "not-allowed" : "pointer",
+            opacity: isHovered ? 1 : 0,
+            transition: "opacity 0.2s ease, background-color 0.2s ease",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            pointerEvents: isHovered ? "auto" : "none",
+          }}
+          onMouseEnter={(e) => {
+            if (!isDeleting) {
+              e.currentTarget.style.backgroundColor = tokens.danger;
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!isDeleting) {
+              e.currentTarget.style.backgroundColor = `${tokens.danger}e6`;
+            }
+          }}
+          aria-label={`Delete ${flyer.title}`}
+        >
+          <TrashIcon 
+            size={16} 
+            color="white" 
+            strokeWidth={2.5}
+          />
+        </button>
       </div>
       <div style={{ padding: "20px" }}>
         <h3
