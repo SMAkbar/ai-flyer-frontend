@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Card } from "./Card";
 import { tokens } from "../theme/tokens";
 
@@ -51,7 +52,7 @@ export function Modal({
 
   if (!isOpen) return null;
 
-  return (
+  const modalContent = (
     <div
       style={{
         position: "fixed",
@@ -63,7 +64,7 @@ export function Modal({
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        zIndex: 1000,
+        zIndex: 9999,
         padding: "24px",
       }}
       onClick={(e) => {
@@ -149,4 +150,11 @@ export function Modal({
       </Card>
     </div>
   );
+
+  // Render modal to document body using portal to ensure it's always on top
+  if (typeof document !== "undefined") {
+    return createPortal(modalContent, document.body);
+  }
+
+  return null;
 }
