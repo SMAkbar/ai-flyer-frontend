@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { PostStatusBadge } from "@/components/flyers/PostStatusBadge";
+import { Modal } from "@/components/ui/Modal";
+import { Button } from "@/components/ui/Button";
 import { tokens } from "@/components/theme/tokens";
-import { ImageIcon, ExternalLinkIcon, ClockIcon, TrashIcon } from "@/components/icons";
+import { ImageIcon, ExternalLinkIcon, ClockIcon, TrashIcon, WarningIcon } from "@/components/icons";
 import { flyersApi } from "@/lib/api/flyers";
 import type { FlyerRead, ExtractionStatus } from "@/lib/api/flyers";
 import type { PostStatus } from "@/lib/api/instagram";
@@ -25,6 +27,7 @@ export function FlyerCard({ flyer, onDelete, filterStatus = "all", searchQuery =
   const [isHovered, setIsHovered] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -51,19 +54,20 @@ export function FlyerCard({ flyer, onDelete, filterStatus = "all", searchQuery =
     router.push(url);
   };
 
-  const handleDelete = async (e: React.MouseEvent) => {
+  const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent card click navigation
-    
-    if (!confirm(`Are you sure you want to delete "${flyer.title}"? This action cannot be undone.`)) {
-      return;
-    }
+    setShowDeleteModal(true);
+  };
 
+  const handleDeleteConfirm = async () => {
     setIsDeleting(true);
     try {
       const result = await flyersApi.delete(flyer.id);
       if (result.ok) {
+        setShowDeleteModal(false);
         onDelete?.();
       } else {
+        // Show error in modal or use a toast notification
         alert(result.error.message || "Failed to delete flyer");
       }
     } catch (err) {
@@ -156,7 +160,7 @@ export function FlyerCard({ flyer, onDelete, filterStatus = "all", searchQuery =
         </div>
         {/* Delete Button */}
         <button
-          onClick={handleDelete}
+          onClick={handleDeleteClick}
           disabled={isDeleting}
           style={{
             position: "absolute",
@@ -269,6 +273,107 @@ export function FlyerCard({ flyer, onDelete, filterStatus = "all", searchQuery =
           {formatDate(flyer.created_at)}
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => !isDeleting && setShowDeleteModal(false)}
+        title="Delete Flyer"
+        maxWidth="480px"
+      >
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "24px",
+          }}
+        >
+          {/* Warning Icon and Message */}
+          <div
+            style={{
+              display: "flex",
+              gap: "16px",
+              alignItems: "flex-start",
+            }}
+          >
+            <div
+              style={{
+                flexShrink: 0,
+                width: "48px",
+                height: "48px",
+                borderRadius: "50%",
+                backgroundColor: `${tokens.danger}20`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <WarningIcon size={24} color={tokens.danger} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <p
+                style={{
+                  margin: 0,
+                  marginBottom: "8px",
+                  fontSize: "16px",
+                  fontWeight: 600,
+                  color: tokens.textPrimary,
+                }}
+              >
+                Are you sure you want to delete this flyer?
+              </p>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: "14px",
+                  color: tokens.textSecondary,
+                  lineHeight: 1.5,
+                }}
+              >
+                This will permanently delete "{flyer.title}". This action cannot be undone.
+              </p>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div
+            style={{
+              display: "flex",
+              gap: "12px",
+              justifyContent: "flex-end",
+            }}
+          >
+            <Button
+              variant="secondary"
+              onClick={() => setShowDeleteModal(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+              style={{
+                backgroundColor: tokens.danger,
+                color: "white",
+              }}
+              onMouseEnter={(e) => {
+                if (!isDeleting) {
+                  e.currentTarget.style.backgroundColor = "#DC2626";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isDeleting) {
+                  e.currentTarget.style.backgroundColor = tokens.danger;
+                }
+              }}
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </Card>
   );
 }
