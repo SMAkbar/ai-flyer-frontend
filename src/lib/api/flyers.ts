@@ -20,6 +20,7 @@ export type FlyerInformationExtraction = {
   status: ExtractionStatus;
   event_date: string | null;  // ISO date string (YYYY-MM-DD format)
   location_town_city: string | null;
+  country: string | null;  // Country name (e.g., "United Kingdom", "Germany")
   event_title: string | null;
   performers_djs_soundsystems: string | null;
   venue_name: string | null;
@@ -54,6 +55,7 @@ export type FlyerDetailRead = FlyerRead & {
 export type FlyerInformationExtractionUpdate = {
   event_date?: string | null;  // ISO date string (YYYY-MM-DD format)
   location_town_city?: string | null;
+  country?: string | null;  // Country name (e.g., "United Kingdom", "Germany")
   event_title?: string | null;
   performers_djs_soundsystems?: string | null;
   venue_name?: string | null;

@@ -5,7 +5,7 @@ import { styles } from '../theme/tokens';
 type CardProps = {
   children: React.ReactNode;
   hoverElevate?: boolean;
-  onClick?: () => void;
+  onClick?: (e: React.MouseEvent<HTMLDivElement>) => void;
   style?: React.CSSProperties;
   onMouseEnter?: (e: React.MouseEvent<HTMLDivElement>) => void;
   onMouseLeave?: (e: React.MouseEvent<HTMLDivElement>) => void;
