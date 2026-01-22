@@ -14,6 +14,7 @@ export type ExtractionData = {
   status: 'completed' | 'processing' | 'failed' | 'pending';
   event_date?: string | null;
   location_town_city?: string | null;
+  country?: string | null;
   event_title?: string | null;
   venue_name?: string | null;
   performers_djs_soundsystems?: string | null;
@@ -26,6 +27,7 @@ export type ExtractionData = {
 export type EditedFields = {
   event_date?: string;
   location_town_city?: string;
+  country?: string;
   event_title?: string;
   venue_name?: string;
   performers_djs_soundsystems?: string;
@@ -384,7 +386,7 @@ export function ExtractionCard({
 
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                  <FieldLabel>Location</FieldLabel>
+                  <FieldLabel>Location (Town/City)</FieldLabel>
                   <ConfidenceBadge
                     status={getFieldConfidenceStatus(
                       extraction.location_town_city,
@@ -398,6 +400,27 @@ export function ExtractionCard({
                   value={extraction.location_town_city}
                   editedValue={editedFields.location_town_city}
                   placeholder="Enter location (town/city)"
+                  onChange={onFieldChange}
+                  disabled={isUpdating}
+                />
+              </div>
+
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  <FieldLabel>Country</FieldLabel>
+                  <ConfidenceBadge
+                    status={getFieldConfidenceStatus(
+                      extraction.country,
+                      extraction.field_confidence_levels?.country
+                    )}
+                    confidence={extraction.field_confidence_levels?.country}
+                  />
+                </div>
+                <InlineEditableField
+                  fieldName="country"
+                  value={extraction.country}
+                  editedValue={editedFields.country}
+                  placeholder="Enter country"
                   onChange={onFieldChange}
                   disabled={isUpdating}
                 />
