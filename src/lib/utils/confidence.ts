@@ -42,7 +42,7 @@ export function normalizeConfidence(confidenceLevel: string | null | undefined):
 export function shouldAutoGenerateImages(
   fieldConfidenceLevels: Record<string, string | null> | null | undefined,
   fieldValues: {
-    event_date?: string | null;
+    event_date?: string | null;  // ISO date string (YYYY-MM-DD format)
     location_town_city?: string | null;
     event_title?: string | null;
     performers_djs_soundsystems?: string | null;

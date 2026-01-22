@@ -52,6 +52,21 @@ export function InstagramSchedulingPage({
     generateDefaultCaption();
   }, [flyer]);
 
+  // Helper to format ISO date string to display format (e.g., "15 January 2025")
+  function formatDateForCaption(isoDate: string | null | undefined): string | null {
+    if (!isoDate) return null;
+    try {
+      const date = new Date(isoDate + "T00:00:00");  // Parse as local date
+      return date.toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+    } catch {
+      return null;
+    }
+  }
+
   // Auto-generate caption from extraction data
   function generateDefaultCaption() {
     const parts: string[] = [];
@@ -63,8 +78,9 @@ export function InstagramSchedulingPage({
         parts.push(extraction.event_title);
       }
 
-      if (extraction.event_date) {
-        parts.push(`📅 ${extraction.event_date}`);
+      const formattedDate = formatDateForCaption(extraction.event_date);
+      if (formattedDate) {
+        parts.push(`📅 ${formattedDate}`);
       }
 
       if (extraction.location_town_city) {

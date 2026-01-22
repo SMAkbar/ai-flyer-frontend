@@ -7,6 +7,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { DatePicker } from '@/components/ui/DatePicker';
 import { tokens } from '@/components/theme/tokens';
 import { CubeIcon, CheckIcon, WarningIcon, ClockIcon, ImageIcon, SaveIcon, LoaderIcon } from '@/components/icons';
 
@@ -221,6 +222,56 @@ function InlineEditableField({
   );
 }
 
+// Inline date picker field for event_date editing
+function InlineDatePickerField({
+  value,
+  editedValue,
+  onChange,
+  disabled = false,
+}: {
+  value: string | null | undefined;
+  editedValue: string | undefined;
+  onChange: (value: string | null) => void;
+  disabled?: boolean;
+}) {
+  // Use edited value if available, otherwise use original value
+  const currentValue = editedValue !== undefined ? editedValue : (value ?? null);
+  const isModified = editedValue !== undefined && editedValue !== (value ?? '');
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <DatePicker
+        value={currentValue || null}
+        onChange={(newValue) => onChange(newValue)}
+        disabled={disabled}
+        placeholder="Select event date"
+        style={{
+          borderColor: isModified ? tokens.accent : undefined,
+          boxShadow: isModified ? `0 0 0 1px ${tokens.accent}40` : undefined,
+        }}
+      />
+      {isModified && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '-6px',
+            right: '8px',
+            fontSize: '10px',
+            fontWeight: 600,
+            color: tokens.accent,
+            backgroundColor: tokens.bgElevated,
+            padding: '1px 6px',
+            borderRadius: '4px',
+            zIndex: 1,
+          }}
+        >
+          Modified
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ExtractionCard({
   extraction,
   editedFields,
@@ -344,7 +395,7 @@ export function ExtractionCard({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                  <FieldLabel>Event Date/Time</FieldLabel>
+                  <FieldLabel>Event Date</FieldLabel>
                   <ConfidenceBadge
                     status={getFieldConfidenceStatus(
                       extraction.event_date,
@@ -353,12 +404,10 @@ export function ExtractionCard({
                     confidence={extraction.field_confidence_levels?.event_date}
                   />
                 </div>
-                <InlineEditableField
-                  fieldName="event_date"
+                <InlineDatePickerField
                   value={extraction.event_date}
                   editedValue={editedFields.event_date}
-                  placeholder="Enter event date/time"
-                  onChange={onFieldChange}
+                  onChange={(value) => onFieldChange('event_date', value || '')}
                   disabled={isUpdating}
                 />
               </div>
