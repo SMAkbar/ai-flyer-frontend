@@ -7,10 +7,11 @@ import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { DateTimePicker } from "@/components/ui/DateTimePicker";
 import { tokens } from "@/components/theme/tokens";
+import { InstaScheduleCal } from "./InstaScheduleCal";
 
 type PostingMode = "now" | "schedule";
 
-type PostingOptionsCardProps = {
+type PostingOptionsCardProps = {  
   caption: string;
   hashtags: string;
   scheduledAt: string; // ISO datetime string
@@ -218,7 +219,7 @@ export function PostingOptionsCard({
 
         {/* Date/Time Picker */}
         {postingMode === "schedule" && (
-          <div style={{ marginTop: "16px", marginLeft: "28px" }}>
+          <div style={{ marginTop: "16px", marginLeft: "0px" }}>
             <label
               style={{
                 display: "block",
@@ -230,6 +231,11 @@ export function PostingOptionsCard({
             >
               Scheduled Date & Time
             </label>
+            {/* <div style={{ marginBottom: "16px" }}>
+              <InstaScheduleCal
+                disabled={disabled || isSubmitting}
+              />
+            </div> */}
             <DateTimePicker
               value={scheduledAt}
               onChange={onScheduledAtChange}

@@ -1,3 +1,4 @@
+export { ArchiveIcon } from "./Archive";
 export { DashboardIcon } from "./Dashboard";
 export { FlyersIcon } from "./Flyers";
 export { ProfileIcon } from "./Profile";

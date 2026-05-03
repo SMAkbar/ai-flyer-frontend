@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { tokens } from "@/components/theme/tokens";
 import { ImageIcon, ExternalLinkIcon, ClockIcon, TrashIcon, WarningIcon } from "@/components/icons";
 import { flyersApi } from "@/lib/api/flyers";
+import { archivesApi } from "@/lib/api/archives";
 import type { FlyerRead, ExtractionStatus } from "@/lib/api/flyers";
 import type { PostStatus } from "@/lib/api/instagram";
 import type { FilterStatus, SortOption } from "@/lib/utils/flyerFilters";
@@ -17,17 +18,33 @@ import type { FilterStatus, SortOption } from "@/lib/utils/flyerFilters";
 type FlyerCardProps = {
   flyer: FlyerRead;
   onDelete?: () => void;
+  onUnarchive?: () => void;
   filterStatus?: FilterStatus;
   searchQuery?: string;
   sortOption?: SortOption;
+  disableNavigation?: boolean;
+  hideDelete?: boolean;
+  showUnarchive?: boolean;
 };
 
-export function FlyerCard({ flyer, onDelete, filterStatus = "all", searchQuery = "", sortOption = "latest" }: FlyerCardProps) {
+export function FlyerCard({
+  flyer,
+  onDelete,
+  onUnarchive,
+  filterStatus = "all",
+  searchQuery = "",
+  sortOption = "latest",
+  disableNavigation = false,
+  hideDelete = false,
+  showUnarchive = false,
+}: FlyerCardProps) {
   const router = useRouter();
   const [isHovered, setIsHovered] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showUnarchiveModal, setShowUnarchiveModal] = useState(false);
+  const [isUnarchiving, setIsUnarchiving] = useState(false);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -39,6 +56,7 @@ export function FlyerCard({ flyer, onDelete, filterStatus = "all", searchQuery =
   };
 
   const handleClick = () => {
+    if (disableNavigation) return;
     const params = new URLSearchParams();
     if (filterStatus !== "all") {
       params.set("filter", filterStatus);
@@ -59,6 +77,11 @@ export function FlyerCard({ flyer, onDelete, filterStatus = "all", searchQuery =
     setShowDeleteModal(true);
   };
 
+  const handleUnarchiveClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowUnarchiveModal(true);
+  };
+
   const handleDeleteConfirm = async () => {
     setIsDeleting(true);
     try {
@@ -77,12 +100,29 @@ export function FlyerCard({ flyer, onDelete, filterStatus = "all", searchQuery =
     }
   };
 
+  const handleUnarchiveConfirm = async () => {
+    setIsUnarchiving(true);
+    try {
+      const result = await archivesApi.unarchive(flyer.id);
+      if (result.ok) {
+        setShowUnarchiveModal(false);
+        onUnarchive?.();
+      } else {
+        alert(result.error.message || "Failed to unarchive flyer");
+      }
+    } catch (err) {
+      alert("An unexpected error occurred");
+    } finally {
+      setIsUnarchiving(false);
+    }
+  };
+
   return (
     <Card
       hoverElevate
       onClick={handleClick}
       style={{
-        cursor: "pointer",
+        cursor: disableNavigation ? "default" : "pointer",
         backgroundColor: tokens.bgElevated,
         border: `1px solid ${tokens.border}`,
         borderRadius: "16px",
@@ -129,74 +169,112 @@ export function FlyerCard({ flyer, onDelete, filterStatus = "all", searchQuery =
               <ImageIcon size={48} color={tokens.textMuted} strokeWidth="1.5" />
             </div>
         )}
-        <div
-          style={{
-            position: "absolute",
-            top: "12px",
-            right: "12px",
-            backgroundColor: `${tokens.bgBase}e6`,
-            backdropFilter: "blur(8px)",
-            borderRadius: "8px",
-            padding: "6px 10px",
-            border: `1px solid ${tokens.border}`,
-            opacity: isHovered ? 1 : 0,
-            transition: "opacity 0.2s ease",
-            pointerEvents: "none",
-          }}
-        >
-          <span
+        {!disableNavigation && (
+          <div
             style={{
-              fontSize: "12px",
-              fontWeight: 600,
-              color: tokens.textPrimary,
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
+              position: "absolute",
+              top: "12px",
+              right: "12px",
+              backgroundColor: `${tokens.bgBase}e6`,
+              backdropFilter: "blur(8px)",
+              borderRadius: "8px",
+              padding: "6px 10px",
+              border: `1px solid ${tokens.border}`,
+              opacity: isHovered ? 1 : 0,
+              transition: "opacity 0.2s ease",
+              pointerEvents: "none",
             }}
           >
-            <ExternalLinkIcon size={14} color="currentColor" />
-            View Details
-          </span>
-        </div>
+            <span
+              style={{
+                fontSize: "12px",
+                fontWeight: 600,
+                color: tokens.textPrimary,
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+              }}
+            >
+              <ExternalLinkIcon size={14} color="currentColor" />
+              View Details
+            </span>
+          </div>
+        )}
+        {showUnarchive && (
+          <button
+            onClick={handleUnarchiveClick}
+            style={{
+              position: "absolute",
+              top: "12px",
+              right: "12px",
+              backgroundColor: `${tokens.bgBase}e6`,
+              backdropFilter: "blur(8px)",
+              borderRadius: "8px",
+              padding: "6px 10px",
+              border: `1px solid ${tokens.border}`,
+              opacity: isHovered ? 1 : 0,
+              transition: "opacity 0.2s ease, border-color 0.2s ease",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              pointerEvents: isHovered ? "auto" : "none",
+              color: tokens.textPrimary,
+              fontSize: "12px",
+              fontWeight: 600,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = tokens.accent;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = tokens.border;
+            }}
+            aria-label={`Unarchive ${flyer.title}`}
+          >
+            Unarchive
+          </button>
+        )}
         {/* Delete Button */}
-        <button
-          onClick={handleDeleteClick}
-          disabled={isDeleting}
-          style={{
-            position: "absolute",
-            top: "12px",
-            left: "12px",
-            backgroundColor: `${tokens.danger}e6`,
-            backdropFilter: "blur(8px)",
-            borderRadius: "8px",
-            padding: "8px",
-            border: `1px solid ${tokens.danger}80`,
-            cursor: isDeleting ? "not-allowed" : "pointer",
-            opacity: isHovered ? 1 : 0,
-            transition: "opacity 0.2s ease, background-color 0.2s ease",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            pointerEvents: isHovered ? "auto" : "none",
-          }}
-          onMouseEnter={(e) => {
-            if (!isDeleting) {
-              e.currentTarget.style.backgroundColor = tokens.danger;
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!isDeleting) {
-              e.currentTarget.style.backgroundColor = `${tokens.danger}e6`;
-            }
-          }}
-          aria-label={`Delete ${flyer.title}`}
-        >
-          <TrashIcon 
-            size={16} 
-            color="white" 
-            strokeWidth={2.5}
-          />
-        </button>
+        {!hideDelete && (
+          <button
+            onClick={handleDeleteClick}
+            disabled={isDeleting}
+            style={{
+              position: "absolute",
+              top: "12px",
+              left: "12px",
+              backgroundColor: `${tokens.danger}e6`,
+              backdropFilter: "blur(8px)",
+              borderRadius: "8px",
+              padding: "8px",
+              border: `1px solid ${tokens.danger}80`,
+              cursor: isDeleting ? "not-allowed" : "pointer",
+              opacity: isHovered ? 1 : 0,
+              transition: "opacity 0.2s ease, background-color 0.2s ease",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              pointerEvents: isHovered ? "auto" : "none",
+            }}
+            onMouseEnter={(e) => {
+              if (!isDeleting) {
+                e.currentTarget.style.backgroundColor = tokens.danger;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isDeleting) {
+                e.currentTarget.style.backgroundColor = `${tokens.danger}e6`;
+              }
+            }}
+            aria-label={`Delete ${flyer.title}`}
+          >
+            <TrashIcon 
+              size={16} 
+              color="white" 
+              strokeWidth={2.5}
+            />
+          </button>
+        )}
       </div>
       <div style={{ padding: "20px" }}>
         <h3
@@ -275,105 +353,156 @@ export function FlyerCard({ flyer, onDelete, filterStatus = "all", searchQuery =
       </div>
 
       {/* Delete Confirmation Modal */}
-      <Modal
-        isOpen={showDeleteModal}
-        onClose={() => !isDeleting && setShowDeleteModal(false)}
-        title="Delete Flyer"
-        maxWidth="480px"
-      >
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "24px",
-          }}
+      {!hideDelete && (
+        <Modal
+          isOpen={showDeleteModal}
+          onClose={() => !isDeleting && setShowDeleteModal(false)}
+          title="Delete Flyer"
+          maxWidth="480px"
         >
-          {/* Warning Icon and Message */}
           <div
             style={{
               display: "flex",
-              gap: "16px",
-              alignItems: "flex-start",
+              flexDirection: "column",
+              gap: "24px",
             }}
           >
+            {/* Warning Icon and Message */}
             <div
               style={{
-                flexShrink: 0,
-                width: "48px",
-                height: "48px",
-                borderRadius: "50%",
-                backgroundColor: `${tokens.danger}20`,
                 display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
+                gap: "16px",
+                alignItems: "flex-start",
               }}
             >
-              <WarningIcon size={24} color={tokens.danger} />
+              <div
+                style={{
+                  flexShrink: 0,
+                  width: "48px",
+                  height: "48px",
+                  borderRadius: "50%",
+                  backgroundColor: `${tokens.danger}20`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <WarningIcon size={24} color={tokens.danger} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <p
+                  style={{
+                    margin: 0,
+                    marginBottom: "8px",
+                    fontSize: "16px",
+                    fontWeight: 600,
+                    color: tokens.textPrimary,
+                  }}
+                >
+                  Are you sure you want to delete this flyer?
+                </p>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "14px",
+                    color: tokens.textSecondary,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  This will permanently delete "{flyer.title}". This action cannot be undone.
+                </p>
+              </div>
             </div>
-            <div style={{ flex: 1 }}>
-              <p
+
+            {/* Action Buttons */}
+            <div
+              style={{
+                display: "flex",
+                gap: "12px",
+                justifyContent: "flex-end",
+              }}
+            >
+              <Button
+                variant="secondary"
+                onClick={() => setShowDeleteModal(false)}
+                disabled={isDeleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleDeleteConfirm}
+                disabled={isDeleting}
                 style={{
-                  margin: 0,
-                  marginBottom: "8px",
-                  fontSize: "16px",
-                  fontWeight: 600,
-                  color: tokens.textPrimary,
+                  backgroundColor: tokens.danger,
+                  color: "white",
+                }}
+                onMouseEnter={(e) => {
+                  if (!isDeleting) {
+                    e.currentTarget.style.backgroundColor = "#DC2626";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isDeleting) {
+                    e.currentTarget.style.backgroundColor = tokens.danger;
+                  }
                 }}
               >
-                Are you sure you want to delete this flyer?
-              </p>
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: "14px",
-                  color: tokens.textSecondary,
-                  lineHeight: 1.5,
-                }}
-              >
-                This will permanently delete "{flyer.title}". This action cannot be undone.
-              </p>
+                {isDeleting ? "Deleting..." : "Delete"}
+              </Button>
             </div>
           </div>
-
-          {/* Action Buttons */}
+        </Modal>
+      )}
+      {showUnarchive && (
+        <Modal
+          isOpen={showUnarchiveModal}
+          onClose={() => !isUnarchiving && setShowUnarchiveModal(false)}
+          title="Unarchive Flyer"
+          maxWidth="480px"
+        >
           <div
             style={{
               display: "flex",
-              gap: "12px",
-              justifyContent: "flex-end",
+              flexDirection: "column",
+              gap: "24px",
             }}
           >
-            <Button
-              variant="secondary"
-              onClick={() => setShowDeleteModal(false)}
-              disabled={isDeleting}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              onClick={handleDeleteConfirm}
-              disabled={isDeleting}
+            <p
               style={{
-                backgroundColor: tokens.danger,
-                color: "white",
-              }}
-              onMouseEnter={(e) => {
-                if (!isDeleting) {
-                  e.currentTarget.style.backgroundColor = "#DC2626";
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isDeleting) {
-                  e.currentTarget.style.backgroundColor = tokens.danger;
-                }
+                margin: 0,
+                fontSize: "14px",
+                color: tokens.textSecondary,
+                lineHeight: 1.5,
               }}
             >
-              {isDeleting ? "Deleting..." : "Delete"}
-            </Button>
+              Do you want to unarchive "{flyer.title}"?
+            </p>
+            <div
+              style={{
+                display: "flex",
+                gap: "12px",
+                justifyContent: "flex-end",
+              }}
+            >
+              <Button
+                variant="secondary"
+                disabled={isUnarchiving}
+                onClick={() => setShowUnarchiveModal(false)}
+              >
+                No
+              </Button>
+              <Button
+                variant="primary"
+                disabled={isUnarchiving}
+                onClick={handleUnarchiveConfirm}
+              >
+                {isUnarchiving ? "Unarchiving..." : "Yes"}
+              </Button>
+            </div>
           </div>
-        </div>
-      </Modal>
+        </Modal>
+      )}
     </Card>
   );
 }

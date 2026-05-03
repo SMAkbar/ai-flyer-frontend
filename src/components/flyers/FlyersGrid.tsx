@@ -7,12 +7,26 @@ import type { FilterStatus, SortOption } from '@/lib/utils/flyerFilters';
 export type FlyersGridProps = {
   flyers: FlyerRead[];
   onDelete?: () => void;
+  onUnarchive?: () => void;
   filterStatus?: FilterStatus;
   searchQuery?: string;
   sortOption?: SortOption;
+  disableNavigation?: boolean;
+  hideDelete?: boolean;
+  showUnarchive?: boolean;
 };
 
-export function FlyersGrid({ flyers, onDelete, filterStatus = "all", searchQuery = "", sortOption = "latest" }: FlyersGridProps) {
+export function FlyersGrid({
+  flyers,
+  onDelete,
+  onUnarchive,
+  filterStatus = "all",
+  searchQuery = "",
+  sortOption = "latest",
+  disableNavigation = false,
+  hideDelete = false,
+  showUnarchive = false,
+}: FlyersGridProps) {
   return (
     <div
       style={{
@@ -26,9 +40,13 @@ export function FlyersGrid({ flyers, onDelete, filterStatus = "all", searchQuery
           key={flyer.id} 
           flyer={flyer} 
           onDelete={onDelete}
+          onUnarchive={onUnarchive}
           filterStatus={filterStatus}
           searchQuery={searchQuery}
           sortOption={sortOption}
+          disableNavigation={disableNavigation}
+          hideDelete={hideDelete}
+          showUnarchive={showUnarchive}
         />
       ))}
     </div>

@@ -23,6 +23,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<UserProfileRead | null>(null);
   const [flyers, setFlyers] = useState<FlyerRead[]>([]);
+  const [flyersTotal, setFlyersTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,7 +38,7 @@ export default function DashboardPage() {
     try {
       const [userRes, flyersRes] = await Promise.all([
         userApi.getProfile(),
-        flyersApi.getAll(),
+        flyersApi.getPage({ skip: 0, limit: 100 }),
       ]);
 
       if (userRes.ok) {
@@ -45,9 +46,10 @@ export default function DashboardPage() {
       }
 
       if (flyersRes.ok) {
-        setFlyers(flyersRes.data);
-      } else if (!userRes.ok) {
-        setError(flyersRes.error.message || "Failed to load dashboard data");
+        setFlyers(flyersRes.data.items);
+        setFlyersTotal(flyersRes.data.total);
+      } else {
+        setError(flyersRes.error.message || "Failed to load flyers");
       }
     } catch (err) {
       setError("An unexpected error occurred");
@@ -56,12 +58,10 @@ export default function DashboardPage() {
     }
   }
 
-  const totalFlyers = flyers.length;
-  const recentFlyers = flyers
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-    .slice(0, 4);
+  const totalFlyers = flyersTotal;
+  const recentFlyers = flyers.slice(0, 4);
 
-  const completedExtractions = flyers.length; // We'll count all flyers as potentially extracted
+  const completedExtractions = flyersTotal;
   const processingExtractions = 0; // Could be enhanced with actual extraction status
 
   const getUserDisplayName = () => {

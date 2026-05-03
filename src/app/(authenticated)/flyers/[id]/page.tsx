@@ -37,6 +37,7 @@ export default function FlyerDetailPage() {
   const [editedFields, setEditedFields] = useState<EditedFields>({});
   const [isUpdating, setIsUpdating] = useState(false);
   const [isGeneratingImages, setIsGeneratingImages] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
   const [showWordPressPosting, setShowWordPressPosting] = useState(false);
   const [wordpressPost, setWordpressPost] = useState<WordPressPostRead | null>(null);
   const [adjacentFlyers, setAdjacentFlyers] = useState<AdjacentFlyers>({ prev: null, next: null });
@@ -300,6 +301,26 @@ export default function FlyerDetailPage() {
     }
   };
 
+  const handleArchiveFlyer = async () => {
+    if (!flyerId || isArchiving) return;
+
+    setIsArchiving(true);
+    setError(null);
+
+    try {
+      const result = await flyersApi.archive(flyerId);
+      if (result.ok) {
+        handleBackToFlyers();
+      } else {
+        setError(result.error.message || "Failed to archive flyer");
+      }
+    } catch (err) {
+      setError("An unexpected error occurred");
+    } finally {
+      setIsArchiving(false);
+    }
+  };
+
 
   return (
     <PageLayout
@@ -418,7 +439,23 @@ export default function FlyerDetailPage() {
                 alignItems: "start",
               }}
             >
-              <FlyerImageCard imageUrl={flyer.cloudfront_url} alt={flyer.title} />
+              <div
+                style={{
+                  width: "350px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "12px",
+                }}
+              >
+                <FlyerImageCard imageUrl={flyer.cloudfront_url} alt={flyer.title} width="100%" />
+                <Button
+                  variant="secondary"
+                  onClick={handleArchiveFlyer}
+                  disabled={isArchiving}
+                >
+                  {isArchiving ? "Archiving..." : "Archive Flyer"}
+                </Button>
+              </div>
 
               <div
                 style={{

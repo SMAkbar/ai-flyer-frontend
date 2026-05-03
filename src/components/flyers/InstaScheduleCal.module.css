@@ -1,0 +1,73 @@
+/* FullCalendar layout + typography; colors mostly via CSS vars on .calWrap */
+
+.calWrap {
+  font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.calWrap :global(.fc) {
+  font-size: inherit;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.calWrap :global(.fc-toolbar-title) {
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.calWrap :global(.fc-col-header-cell-cushion) {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 10px 4px;
+}
+
+.calWrap :global(.fc-daygrid-day-number) {
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 8px;
+}
+
+.calWrap :global(.fc-day-other .fc-daygrid-day-number) {
+  opacity: 0.45;
+}
+
+/* Toolbar nav buttons — match secondary control feel */
+.calWrap :global(.fc-button) {
+  font-weight: 600;
+  font-size: 13px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  text-transform: capitalize;
+}
+
+.calWrap :global(.fc-button:focus) {
+  box-shadow: none;
+}
+
+/* Selected day (synced with scheduledAt) */
+.daySelected :global(.fc-daygrid-day-number) {
+  background-color: var(--insta-cal-accent-soft);
+  color: var(--insta-cal-accent);
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.daySelected {
+  background-color: var(--insta-cal-accent-tint) !important;
+}
+
+/* Today: subtle, distinct from selection (daySelected is this module’s class on the cell) */
+.calWrap :global(.fc-day-today):not(.daySelected) {
+  background-color: var(--insta-cal-today-bg) !important;
+}
+
+.calWrap :global(.fc-day-today):not(.daySelected) :global(.fc-daygrid-day-number) {
+  color: var(--insta-cal-today-text);
+  font-weight: 600;
+}

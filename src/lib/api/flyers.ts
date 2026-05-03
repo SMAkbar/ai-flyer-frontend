@@ -1,4 +1,5 @@
 import { apiClient } from "./client";
+import type { Result } from "./client";
 import type { PostStatus } from "./instagram";
 
 export type FlyerRead = {
@@ -8,6 +9,7 @@ export type FlyerRead = {
   cloudfront_url: string;
   s3_key: string;
   created_at: string;
+  event_date?: string | null;
   extraction_status?: ExtractionStatus | null;
   carousel_post_status?: PostStatus | null;
 };
@@ -18,9 +20,9 @@ export type FlyerInformationExtraction = {
   id: number;
   flyer_id: number;
   status: ExtractionStatus;
-  event_date: string | null;  // ISO date string (YYYY-MM-DD format)
+  event_date: string | null; // ISO date string (YYYY-MM-DD format)
   location_town_city: string | null;
-  country: string | null;  // Country name (e.g., "United Kingdom", "Germany")
+  country: string | null; // Country name (e.g., "United Kingdom", "Germany")
   event_title: string | null;
   performers_djs_soundsystems: string | null;
   venue_name: string | null;
@@ -40,7 +42,7 @@ export type FlyerGeneratedImage = {
   id: number;
   flyer_id: number;
   image_type: GeneratedImageType;
-  cloudfront_url: string | null;  // Nullable until image is generated
+  cloudfront_url: string | null; // Nullable until image is generated
   generation_status: ImageGenerationStatus;
   generation_error: string | null;
   created_at: string;
@@ -53,9 +55,9 @@ export type FlyerDetailRead = FlyerRead & {
 };
 
 export type FlyerInformationExtractionUpdate = {
-  event_date?: string | null;  // ISO date string (YYYY-MM-DD format)
+  event_date?: string | null; // ISO date string (YYYY-MM-DD format)
   location_town_city?: string | null;
-  country?: string | null;  // Country name (e.g., "United Kingdom", "Germany")
+  country?: string | null; // Country name (e.g., "United Kingdom", "Germany")
   event_title?: string | null;
   performers_djs_soundsystems?: string | null;
   venue_name?: string | null;
@@ -67,8 +69,60 @@ export type BulkFlyerCreateResponse = {
   message: string;
 };
 
+/** Page size for GET /flyers (matches backend default). */
+export const FLYERS_LIST_PAGE_SIZE = 20;
+
+export type FlyerListStatusFilter =
+  | "all"
+  | "pending"
+  | "processing"
+  | "extracted"
+  | "posted"
+  | "failed";
+export type FlyerListSort = "latest" | "oldest" | "latest_event" | "oldest_event";
+
+export type FlyerListPageResponse = {
+  items: FlyerRead[];
+  total: number;
+  extractions_active: number;
+};
+
+function flyersListPath(params: {
+  skip: number;
+  limit: number;
+  search?: string;
+  status?: FlyerListStatusFilter;
+  sort?: FlyerListSort;
+}): string {
+  const q = new URLSearchParams();
+  q.set("skip", String(params.skip));
+  q.set("limit", String(params.limit));
+  if (params.search && params.search.trim()) {
+    q.set("search", params.search.trim());
+  }
+  if (params.status && params.status !== "all") {
+    q.set("status", params.status);
+  }
+  if (params.sort && params.sort !== "latest") {
+    q.set("sort", params.sort);
+  }
+  return `/flyers?${q.toString()}`;
+}
+
 export const flyersApi = {
-  getAll: () => apiClient.get<FlyerRead[]>("/flyers"), // Returns FlyerRead with extraction_status and carousel_post_status
+  getPage: (params: {
+    skip: number;
+    limit: number;
+    search?: string;
+    status?: FlyerListStatusFilter;
+    sort?: FlyerListSort;
+  }) =>
+    apiClient.get<FlyerListPageResponse>(flyersListPath(params)),
+  getAll: async (): Promise<Result<FlyerRead[]>> => {
+    const r = await apiClient.get<FlyerListPageResponse>(flyersListPath({ skip: 0, limit: 100 }));
+    if (!r.ok) return r;
+    return { ok: true, data: r.data.items };
+  },
   getById: (id: number) => apiClient.get<FlyerDetailRead>(`/flyers/${id}`),
   create: (formData: FormData) => apiClient.postForm<FlyerRead>("/flyers", formData),
   createBulk: (formData: FormData) => apiClient.postForm<BulkFlyerCreateResponse>("/flyers/bulk", formData),
@@ -77,6 +131,6 @@ export const flyersApi = {
     apiClient.patch<FlyerInformationExtraction>(`/flyers/${id}/extraction`, data),
   generateImages: (id: number) =>
     apiClient.post<{ message: string }>(`/flyers/${id}/generate-images`, {}),
+  archive: (id: number) => apiClient.post<void>(`/flyers/${id}/archive`, {}),
   delete: (id: number) => apiClient.del<void>(`/flyers/${id}`),
 };
-
