@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { Suspense, useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -13,7 +13,7 @@ import { FLYERS_LIST_PAGE_SIZE, type FlyerRead } from "@/lib/api/flyers";
 import { archivesApi } from "@/lib/api/archives";
 import { tokens } from "@/components/theme/tokens";
 
-export default function ArchivesPage() {
+function ArchivesPageContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -215,5 +215,13 @@ export default function ArchivesPage() {
         </>
       )}
     </PageLayout>
+  );
+}
+
+export default function ArchivesPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner message="Loading archives..." />}>
+      <ArchivesPageContent />
+    </Suspense>
   );
 }
