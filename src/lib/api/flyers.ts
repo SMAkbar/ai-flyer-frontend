@@ -8,10 +8,32 @@ export type FlyerRead = {
   description: string | null;
   cloudfront_url: string;
   s3_key: string;
+  flyer_hash?: string | null;
   created_at: string;
   event_date?: string | null;
   extraction_status?: ExtractionStatus | null;
   carousel_post_status?: PostStatus | null;
+};
+
+export type FlyerImageHashCheckResponse = {
+  flyer_hash: string;
+  is_duplicate: boolean;
+  existing_flyer: { id: number; title: string } | null;
+};
+
+export type FlyerBulkHashCheckResponse = {
+  has_duplicates: boolean;
+  matches_in_db: Array<{
+    flyer_hash: string;
+    filenames: string[];
+    existing_flyer_id: number;
+    existing_flyer_title: string | null;
+    existing_flyer_user_id: number | null;
+  }>;
+  duplicates_in_request: Array<{
+    flyer_hash: string;
+    filenames: string[];
+  }>;
 };
 
 export type ExtractionStatus = "pending" | "processing" | "completed" | "failed";
@@ -124,8 +146,23 @@ export const flyersApi = {
     return { ok: true, data: r.data.items };
   },
   getById: (id: number) => apiClient.get<FlyerDetailRead>(`/flyers/${id}`),
+  checkImageHash: (file: File) => {
+    const fd = new FormData();
+    fd.append("image", file);
+    return apiClient.postForm<FlyerImageHashCheckResponse>("/flyers/check-image-hash", fd);
+  },
+  checkBulkImageHashes: (files: File[]) => {
+    const fd = new FormData();
+    files.forEach((file) => fd.append("images", file));
+    return apiClient.postForm<FlyerBulkHashCheckResponse>("/flyers/check-bulk-image-hashes", fd);
+  },
   create: (formData: FormData) => apiClient.postForm<FlyerRead>("/flyers", formData),
-  createBulk: (formData: FormData) => apiClient.postForm<BulkFlyerCreateResponse>("/flyers/bulk", formData),
+  createBulk: (formData: FormData, approveDuplicates = false) => {
+    if (approveDuplicates) {
+      formData.append("approve_duplicates", "true");
+    }
+    return apiClient.postForm<BulkFlyerCreateResponse>("/flyers/bulk", formData);
+  },
   getExtraction: (id: number) => apiClient.get<FlyerInformationExtraction>(`/flyers/${id}/extraction`),
   updateExtraction: (id: number, data: FlyerInformationExtractionUpdate) =>
     apiClient.patch<FlyerInformationExtraction>(`/flyers/${id}/extraction`, data),

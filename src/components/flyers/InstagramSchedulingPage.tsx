@@ -450,6 +450,7 @@ export function InstagramSchedulingPage({
           isSubmitting={isSubmitting}
           disabled={isLoading}
           categoryLabel="Carousel"
+          scheduleSelectionTitle={flyer.title}
         />
       )}
 

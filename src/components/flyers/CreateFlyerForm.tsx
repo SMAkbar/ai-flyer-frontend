@@ -10,13 +10,35 @@ type ImagePreview = {
   preview: string;
 };
 
+export type DuplicateFlyerPrompt = {
+  flyer_hash: string;
+  existing_flyer: { id: number; title: string } | null;
+};
+
+export type BulkDuplicateFlyerPrompt = {
+  matches_in_db_count: number;
+  duplicates_in_request_count: number;
+};
+
 type CreateFlyerFormProps = {
   onSubmit: (formData: FormData) => Promise<void>;
   onCancel: () => void;
   isLoading?: boolean;
+  duplicatePrompt?: DuplicateFlyerPrompt | null;
+  bulkDuplicatePrompt?: BulkDuplicateFlyerPrompt | null;
+  onConfirmDuplicate?: () => void | Promise<void>;
+  onDismissDuplicate?: () => void;
 };
 
-export function CreateFlyerForm({ onSubmit, onCancel, isLoading }: CreateFlyerFormProps) {
+export function CreateFlyerForm({
+  onSubmit,
+  onCancel,
+  isLoading,
+  duplicatePrompt = null,
+  bulkDuplicatePrompt = null,
+  onConfirmDuplicate,
+  onDismissDuplicate,
+}: CreateFlyerFormProps) {
   const [images, setImages] = useState<ImagePreview[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -91,6 +113,8 @@ export function CreateFlyerForm({ onSubmit, onCancel, isLoading }: CreateFlyerFo
 
     await onSubmit(formData);
   }
+
+  const duplicateActive = Boolean(duplicatePrompt || bulkDuplicatePrompt);
 
   function FormField({
     label,
@@ -376,6 +400,69 @@ export function CreateFlyerForm({ onSubmit, onCancel, isLoading }: CreateFlyerFo
           </FormField>
         </Card>
 
+        {(duplicatePrompt || bulkDuplicatePrompt) && onConfirmDuplicate && onDismissDuplicate && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="duplicate-flyer-title"
+            style={{
+              padding: "20px",
+              backgroundColor: `${tokens.warning}18`,
+              border: `1px solid ${tokens.warning}55`,
+              borderRadius: "12px",
+              color: tokens.textPrimary,
+              fontSize: "14px",
+            }}
+          >
+            <h2
+              id="duplicate-flyer-title"
+              style={{
+                fontSize: "16px",
+                fontWeight: 600,
+                margin: "0 0 10px 0",
+                color: tokens.textPrimary,
+              }}
+            >
+              Possible duplicate image
+            </h2>
+            <p style={{ margin: "0 0 16px 0", lineHeight: 1.5, color: tokens.textSecondary }}>
+              {duplicatePrompt?.existing_flyer ? (
+                <>
+                  You already have a flyer that matches this image:{" "}
+                  <strong style={{ color: tokens.textPrimary }}>
+                    {duplicatePrompt.existing_flyer.title}
+                  </strong>{" "}
+                  (id {duplicatePrompt.existing_flyer.id}). Uploading again will create another flyer
+                  record.
+                </>
+              ) : bulkDuplicatePrompt ? (
+                <>
+                  We found duplicate flyers in this bulk upload (
+                  {bulkDuplicatePrompt.matches_in_db_count} matching existing flyers).
+                  Do you want to continue anyway?
+                </>
+              ) : (
+                <>
+                  This image matches a flyer already stored in the system. Uploading will create a new
+                  flyer for your account.
+                </>
+              )}
+            </p>
+            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+              <Button
+                type="button"
+                onClick={() => void onConfirmDuplicate()}
+                disabled={isLoading}
+              >
+                {isLoading ? "Uploading…" : "Upload anyway"}
+              </Button>
+              <Button type="button" variant="secondary" onClick={onDismissDuplicate} disabled={isLoading}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
+
         {error && (
           <div
             style={{
@@ -415,7 +502,11 @@ export function CreateFlyerForm({ onSubmit, onCancel, isLoading }: CreateFlyerFo
             flexWrap: "wrap",
           }}
         >
-          <Button type="submit" disabled={isLoading || images.length === 0} style={{ minWidth: "160px" }}>
+          <Button
+            type="submit"
+            disabled={isLoading || images.length === 0 || duplicateActive}
+            style={{ minWidth: "160px" }}
+          >
             {isLoading ? (
               <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
                 <svg
@@ -462,7 +553,7 @@ export function CreateFlyerForm({ onSubmit, onCancel, isLoading }: CreateFlyerFo
             type="button"
             variant="secondary"
             onClick={onCancel}
-            disabled={isLoading}
+            disabled={isLoading || duplicateActive}
             style={{ minWidth: "120px" }}
           >
             Cancel

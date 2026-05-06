@@ -2,7 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CreateFlyerForm } from "@/components/flyers/CreateFlyerForm";
+import {
+  CreateFlyerForm,
+  type DuplicateFlyerPrompt,
+  type BulkDuplicateFlyerPrompt,
+} from "@/components/flyers/CreateFlyerForm";
 import { flyersApi } from "@/lib/api/flyers";
 import { tokens } from "@/components/theme/tokens";
 
@@ -11,35 +15,66 @@ export default function CreateFlyerPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [duplicatePrompt, setDuplicatePrompt] = useState<DuplicateFlyerPrompt | null>(null);
+  const [bulkDuplicatePrompt, setBulkDuplicatePrompt] =
+    useState<BulkDuplicateFlyerPrompt | null>(null);
+  const [pendingSingleFile, setPendingSingleFile] = useState<File | null>(null);
+  const [pendingBulkFiles, setPendingBulkFiles] = useState<File[] | null>(null);
 
-  async function handleSubmit(formData: FormData) {
-    setIsSubmitting(true);
+  function buildBulkFormData(files: File[]): FormData {
+    const fd = new FormData();
+    files.forEach((file) => fd.append("images", file));
+    return fd;
+  }
+
+  async function createSingleWithHash(file: File, flyer_hash: string): Promise<boolean> {
+    const singleFormData = new FormData();
+    singleFormData.append("image", file);
+    singleFormData.append("flyer_hash", flyer_hash);
+    const result = await flyersApi.create(singleFormData);
+    if (result.ok) {
+      setSuccessMessage("Flyer created successfully! Processing started.");
+      setTimeout(() => {
+        router.push("/flyers");
+      }, 1500);
+      return true;
+    }
+    setError(result.error.message || "Failed to create flyer");
+    return false;
+  }
+
+  async function handleExtractInformation(formData: FormData) {
     setError(null);
     setSuccessMessage(null);
 
-    try {
-      // Get all images from the form data
-      const images = formData.getAll("images");
-      
-      if (images.length === 1) {
-        // Single image: use the single endpoint
-        const singleFormData = new FormData();
-        singleFormData.append("image", images[0]);
-        
-        const result = await flyersApi.create(singleFormData);
+    const images = formData.getAll("images") as File[];
 
-        if (result.ok) {
-          setSuccessMessage("Flyer created successfully! Processing started.");
-          setTimeout(() => {
-            router.push("/flyers");
-          }, 1500);
-        } else {
-          setError(result.error.message || "Failed to create flyer");
+    if (images.length > 1) {
+      setIsSubmitting(true);
+      try {
+        const duplicateCheck = await flyersApi.checkBulkImageHashes(images);
+        if (!duplicateCheck.ok) {
+          setError(duplicateCheck.error.message || "Could not verify bulk upload");
+          return;
         }
-      } else {
-        // Multiple images: use the bulk endpoint
-        const result = await flyersApi.createBulk(formData);
+        if (duplicateCheck.data.has_duplicates) {
+          const matchesInDbCount = duplicateCheck.data.matches_in_db.reduce(
+            (acc, item) => acc + item.filenames.length,
+            0
+          );
+          const duplicatesInRequestCount = duplicateCheck.data.duplicates_in_request.reduce(
+            (acc, item) => acc + item.filenames.length,
+            0
+          );
+          setBulkDuplicatePrompt({
+            matches_in_db_count: matchesInDbCount,
+            duplicates_in_request_count: duplicatesInRequestCount,
+          });
+          setPendingBulkFiles(images);
+          return;
+        }
 
+        const result = await flyersApi.createBulk(buildBulkFormData(images));
         if (result.ok) {
           setSuccessMessage(
             `${result.data.flyers.length} flyers uploaded successfully! Processing started in background.`
@@ -50,16 +85,89 @@ export default function CreateFlyerPage() {
         } else {
           setError(result.error.message || "Failed to upload flyers");
         }
+      } catch {
+        setError("An unexpected error occurred");
+      } finally {
+        setIsSubmitting(false);
       }
-    } catch (err) {
+      return;
+    }
+
+    const file = images[0];
+    setBulkDuplicatePrompt(null);
+    setPendingBulkFiles(null);
+    setIsSubmitting(true);
+    try {
+      const check = await flyersApi.checkImageHash(file);
+      if (!check.ok) {
+        setError(check.error.message || "Could not verify image");
+        return;
+      }
+      if (check.data.is_duplicate) {
+        setDuplicatePrompt({
+          flyer_hash: check.data.flyer_hash,
+          existing_flyer: check.data.existing_flyer,
+        });
+        setPendingSingleFile(file);
+        return;
+      }
+      await createSingleWithHash(file, check.data.flyer_hash);
+    } catch {
       setError("An unexpected error occurred");
     } finally {
       setIsSubmitting(false);
     }
   }
 
-  function handleCancel() {
-    router.back();
+  async function handleConfirmDuplicate() {
+    if (pendingSingleFile && duplicatePrompt) {
+      const file = pendingSingleFile;
+      const hash = duplicatePrompt.flyer_hash;
+      setDuplicatePrompt(null);
+      setPendingSingleFile(null);
+      setIsSubmitting(true);
+      setError(null);
+      try {
+        await createSingleWithHash(file, hash);
+      } catch {
+        setError("An unexpected error occurred");
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
+    if (pendingBulkFiles && bulkDuplicatePrompt) {
+      setBulkDuplicatePrompt(null);
+      const files = pendingBulkFiles;
+      setPendingBulkFiles(null);
+      setIsSubmitting(true);
+      setError(null);
+      try {
+        const result = await flyersApi.createBulk(buildBulkFormData(files), true);
+        if (result.ok) {
+          setSuccessMessage(
+            `${result.data.flyers.length} flyers uploaded successfully! Processing started in background.`
+          );
+          setTimeout(() => {
+            router.push("/flyers");
+          }, 1500);
+        } else {
+          setError(result.error.message || "Failed to upload flyers");
+        }
+      } catch {
+        setError("An unexpected error occurred");
+      } finally {
+        setIsSubmitting(false);
+      }
+    }
+  }
+
+  function handleDismissDuplicate() {
+    setDuplicatePrompt(null);
+    setPendingSingleFile(null);
+    setBulkDuplicatePrompt(null);
+    setPendingBulkFiles(null);
   }
 
   return (
@@ -89,7 +197,7 @@ export default function CreateFlyerPage() {
             margin: 0,
           }}
         >
-          Upload one or more images and we'll automatically extract event information from your flyers
+          Upload one or more images and we&apos;ll automatically extract event information from your flyers
         </p>
       </div>
 
@@ -156,9 +264,13 @@ export default function CreateFlyerPage() {
       )}
 
       <CreateFlyerForm
-        onSubmit={handleSubmit}
-        onCancel={handleCancel}
+        onSubmit={handleExtractInformation}
+        onCancel={() => router.back()}
         isLoading={isSubmitting}
+        duplicatePrompt={duplicatePrompt}
+        bulkDuplicatePrompt={bulkDuplicatePrompt}
+        onConfirmDuplicate={() => void handleConfirmDuplicate()}
+        onDismissDuplicate={handleDismissDuplicate}
       />
     </div>
   );

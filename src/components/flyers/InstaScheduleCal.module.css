@@ -1,10 +1,23 @@
 /* FullCalendar layout + typography; colors mostly via CSS vars on .calWrap */
 
 .calWrap {
+  position: relative;
   font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.loadingOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 8px;
+  backdrop-filter: blur(2px);
 }
 
 .calWrap :global(.fc) {
@@ -70,4 +83,137 @@
 .calWrap :global(.fc-day-today):not(.daySelected) :global(.fc-daygrid-day-number) {
   color: var(--insta-cal-today-text);
   font-weight: 600;
+}
+
+/* Clickable days when choosing a schedule time (future / today only) */
+.dayCellSelectable :global(.fc-daygrid-day-frame) {
+  cursor: pointer;
+}
+
+.dayCellPast {
+  cursor: not-allowed;
+}
+
+.dayCellPast :global(.fc-daygrid-day-frame) {
+  cursor: not-allowed;
+}
+
+/* User’s draft time from Date/Time fields or calendar — accent, read-only */
+.selectionEvent {
+  cursor: default;
+  border-radius: 6px;
+  border: 1px solid var(--insta-cal-accent) !important;
+  background-color: rgba(229, 9, 20, 0.18) !important;
+  color: var(--insta-cal-selection-text) !important;
+}
+
+.selectionEvent :global(.fc-event-main),
+.selectionEvent :global(.fc-event-title),
+.selectionEvent :global(.fc-event-time) {
+  color: var(--insta-cal-selection-text) !important;
+}
+
+/* API scheduled slots — read-only, gray chip, white title (theme vars on .calWrap) */
+.slotEvent {
+  cursor: default;
+  border-radius: 6px;
+  border: 1px solid var(--insta-cal-slot-border) !important;
+  background-color: var(--insta-cal-slot-bg) !important;
+  color: var(--insta-cal-slot-text) !important;
+}
+
+.slotEvent :global(.fc-event-main) {
+  color: var(--insta-cal-slot-text);
+}
+
+.slotEvent :global(.fc-event-title) {
+  color: var(--insta-cal-slot-text);
+  font-weight: 600;
+  font-size: 12px;
+  line-height: 1.25;
+  padding: 2px 0;
+}
+
+.slotEvent :global(.fc-event-time) {
+  color: var(--insta-cal-slot-text);
+  opacity: 0.85;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* Portaled hover tooltip for scheduled slots */
+.slotPopover {
+  position: fixed;
+  z-index: 10050;
+  max-width: min(288px, calc(100vw - 24px));
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid;
+  pointer-events: none;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
+  font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.slotPopoverTitle {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+  margin: 0 0 6px 0;
+  word-break: break-word;
+}
+
+.slotPopoverMeta {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.35;
+  margin: 0;
+}
+
+/* Schedule slot editor (after picking a day on the grid) */
+.scheduleBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10090;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+}
+
+.scheduleEditorPopover {
+  position: fixed;
+  z-index: 10091;
+  width: min(320px, calc(100vw - 24px));
+  padding: 16px 18px;
+  border-radius: 12px;
+  border: 1px solid;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+  font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.scheduleEditorTitle {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 4px 0;
+  letter-spacing: -0.02em;
+}
+
+.scheduleEditorSubtitle {
+  font-size: 13px;
+  margin: 0 0 14px 0;
+  line-height: 1.35;
+}
+
+.scheduleEditorError {
+  font-size: 13px;
+  font-weight: 500;
+  margin: 0 0 12px 0;
+  line-height: 1.35;
+}
+
+.scheduleEditorActions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 4px;
 }

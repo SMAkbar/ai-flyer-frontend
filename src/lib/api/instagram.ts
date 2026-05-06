@@ -55,6 +55,15 @@ export type AllScheduledPostsResponse = {
   scheduled_posts: ScheduledPostWithFlyerRead[];
 };
 
+export type ScheduledPostSlot = {
+  timeslot: string;
+  flyer_name: string;
+};
+
+export type ScheduledPostSlotsInRangeResponse = {
+  slots: ScheduledPostSlot[];
+};
+
 // Carousel post types
 export type SelectCarouselRequest = {
   time_date_image_id: number;
@@ -125,6 +134,13 @@ export const instagramApi = {
 
   getAllScheduledPosts: () =>
     apiClient.get<AllScheduledPostsResponse>("/instagram/scheduled"),
+
+  getScheduledSlotsInRange: (startIso: string, endIso: string) => {
+    const q = new URLSearchParams({ start: startIso, end: endIso });
+    return apiClient.get<ScheduledPostSlotsInRangeResponse>(
+      `/instagram/scheduled-slots?${q.toString()}`
+    );
+  },
 
   // Carousel post methods
   selectCarousel: (flyerId: number, data: SelectCarouselRequest) =>
