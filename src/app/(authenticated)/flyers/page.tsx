@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { Suspense, useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -22,7 +22,7 @@ function toApiStatusFilter(status: FilterStatus) {
   return status;
 }
 
-export default function FlyersPage() {
+function FlyersPageContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -547,5 +547,13 @@ export default function FlyersPage() {
         </>
       )}
     </PageLayout>
+  );
+}
+
+export default function FlyersPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner message="Loading flyers..." />}>
+      <FlyersPageContent />
+    </Suspense>
   );
 }
