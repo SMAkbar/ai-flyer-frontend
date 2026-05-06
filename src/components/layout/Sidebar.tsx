@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { tokens } from "@/components/theme/tokens";
 import {
   DashboardIcon,
+  ArchiveIcon,
   FlyersIcon,
   ProfileIcon,
   ThemeIcon,
@@ -27,6 +28,7 @@ const navItems: Array<{ href: string; label: string; Icon: NavItemIcon }> = [
   { href: "/dashboard", label: "Dashboard", Icon: DashboardIcon },
   { href: "/flyers", label: "Flyers", Icon: FlyersIcon },
   { href: "/schedules", label: "Schedules", Icon: ClockIcon },
+  { href: "/archives", label: "Archives", Icon: ArchiveIcon },
   { href: "/profile", label: "Profile", Icon: ProfileIcon },
   { href: "/settings", label: "Settings", Icon: SettingsIcon },
 ];

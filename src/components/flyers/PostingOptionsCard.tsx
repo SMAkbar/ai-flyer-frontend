@@ -1,16 +1,17 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { DateTimePicker } from "@/components/ui/DateTimePicker";
 import { tokens } from "@/components/theme/tokens";
+import { InstaScheduleCal } from "./InstaScheduleCal";
 
 type PostingMode = "now" | "schedule";
 
-type PostingOptionsCardProps = {
+type PostingOptionsCardProps = {  
   caption: string;
   hashtags: string;
   scheduledAt: string; // ISO datetime string
@@ -23,6 +24,8 @@ type PostingOptionsCardProps = {
   isSubmitting?: boolean;
   disabled?: boolean;
   categoryLabel?: string; // Optional label to show which category this is for
+  /** Shown on the calendar for the user’s draft slot (e.g. flyer title). */
+  scheduleSelectionTitle?: string;
 };
 
 export function PostingOptionsCard({
@@ -38,10 +41,16 @@ export function PostingOptionsCard({
   isSubmitting = false,
   disabled = false,
   categoryLabel,
+  scheduleSelectionTitle,
 }: PostingOptionsCardProps) {
   const handleModeChange = (mode: PostingMode) => {
     onPostingModeChange(mode);
   };
+
+  const minScheduleIso = useMemo(
+    () => new Date(Date.now() + 60_000).toISOString(),
+    [scheduledAt]
+  );
 
   // Generate unique name for radio buttons based on category
   const radioGroupName = `postingMode-${categoryLabel || "default"}`;
@@ -218,7 +227,7 @@ export function PostingOptionsCard({
 
         {/* Date/Time Picker */}
         {postingMode === "schedule" && (
-          <div style={{ marginTop: "16px", marginLeft: "28px" }}>
+          <div style={{ marginTop: "16px", marginLeft: "0px" }}>
             <label
               style={{
                 display: "block",
@@ -230,13 +239,26 @@ export function PostingOptionsCard({
             >
               Scheduled Date & Time
             </label>
-            <DateTimePicker
+            <div style={{ marginBottom: "16px" }}>
+              <InstaScheduleCal
+                disabled={disabled || isSubmitting}
+                selectedScheduledAt={scheduledAt}
+                onSelectScheduledAt={onScheduledAtChange}
+                selectionEventTitle={
+                  scheduleSelectionTitle ??
+                  (categoryLabel
+                    ? `Scheduled: ${categoryLabel}`
+                    : "Your scheduled time")
+                }
+              />
+            </div>
+            {/* <DateTimePicker
               value={scheduledAt}
               onChange={onScheduledAtChange}
               disabled={disabled || isSubmitting}
               // No min prop: users can select any date/time.
               // The backend handles past/present times by posting immediately.
-            />
+            /> */}
           </div>
         )}
       </div>

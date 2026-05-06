@@ -99,6 +99,9 @@ export function InstagramSchedulingPage({
     // Always add collaboration credit at the end
     parts.push("Proudly promoting dub events in collaboration with @dubcentralsoundsystem 🤝🔊");
 
+    // Add website url at the end
+    parts.push("https://dubevents.club/");
+
     setCaption(parts.join("\n\n"));
   }
 
@@ -447,6 +450,7 @@ export function InstagramSchedulingPage({
           isSubmitting={isSubmitting}
           disabled={isLoading}
           categoryLabel="Carousel"
+          scheduleSelectionTitle={flyer.title}
         />
       )}
 

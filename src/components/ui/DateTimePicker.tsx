@@ -9,6 +9,12 @@ type DateTimePickerProps = {
   onChange: (isoString: string) => void;
   disabled?: boolean;
   min?: string; // ISO datetime string for minimum date/time
+  /** When true, the date field is read-only (same control as the main form, but not editable). */
+  dateFieldDisabled?: boolean;
+  /** Focus the time field once when this becomes true (e.g. calendar schedule popover opened). */
+  autoFocusTime?: boolean;
+  /** `stacked`: date and time each use full width (e.g. narrow popover). Default is a single row. */
+  fieldLayout?: "row" | "stacked";
 };
 
 export function DateTimePicker({
@@ -16,6 +22,9 @@ export function DateTimePicker({
   onChange,
   disabled = false,
   min,
+  dateFieldDisabled = false,
+  autoFocusTime = false,
+  fieldLayout = "row",
 }: DateTimePickerProps) {
   // Parse the ISO datetime string into date and time parts
   const getDateValue = (isoString: string): string => {
@@ -49,6 +58,7 @@ export function DateTimePicker({
   const [timeValue, setTimeValue] = useState<string>(getTimeValue(value));
   const dateInputRef = useRef<HTMLInputElement>(null);
   const timeInputRef = useRef<HTMLInputElement>(null);
+  const didAutoFocusTimeRef = useRef(false);
 
   // Update local state when value prop changes
   useEffect(() => {
@@ -56,8 +66,22 @@ export function DateTimePicker({
     setTimeValue(getTimeValue(value));
   }, [value]);
 
+  useEffect(() => {
+    if (!autoFocusTime || disabled) {
+      didAutoFocusTimeRef.current = false;
+      return;
+    }
+    if (didAutoFocusTimeRef.current) return;
+    didAutoFocusTimeRef.current = true;
+    const id = requestAnimationFrame(() => {
+      timeInputRef.current?.focus();
+    });
+    return () => cancelAnimationFrame(id);
+  }, [autoFocusTime, disabled]);
+
   // Handle date input click - open calendar picker
   const handleDateInputClick = (e: React.MouseEvent<HTMLInputElement>) => {
+    if (dateFieldDisabled || disabled) return;
     if (dateInputRef.current && !disabled) {
       // Try to use showPicker() immediately (requires user gesture)
       if (typeof dateInputRef.current.showPicker === "function") {
@@ -73,6 +97,7 @@ export function DateTimePicker({
 
   // Handle date input focus - open calendar picker
   const handleDateInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    if (dateFieldDisabled || disabled) return;
     // Open picker when focused via keyboard (Tab key)
     if (dateInputRef.current && !disabled) {
       // Small delay to ensure focus is set and avoid conflicts
@@ -85,6 +110,7 @@ export function DateTimePicker({
   };
 
   const openDatePicker = () => {
+    if (dateFieldDisabled || disabled) return;
     if (dateInputRef.current && !disabled) {
       // Try to use showPicker() if available (modern browsers)
       if (typeof dateInputRef.current.showPicker === "function") {
@@ -245,15 +271,19 @@ export function DateTimePicker({
   const minDate = min ? getDateValue(min) : undefined;
   const minTime = min && dateValue === minDate ? getTimeValue(min) : undefined;
 
+  const isStacked = fieldLayout === "stacked";
+
   return (
     <div
       style={{
         display: "flex",
-        gap: "12px",
+        flexDirection: isStacked ? "column" : "row",
+        gap: isStacked ? "14px" : "12px",
         alignItems: "flex-start",
+        width: "100%",
       }}
     >
-      <div style={{ flex: 1 }}>
+      <div style={{ flex: isStacked ? "none" : 1, width: isStacked ? "100%" : undefined }}>
         <label
           style={{
             display: "block",
@@ -273,15 +303,17 @@ export function DateTimePicker({
           onClick={handleDateInputClick}
           onFocus={handleDateInputFocus}
           onKeyDown={handleKeyDown}
-          disabled={disabled}
+          disabled={disabled || dateFieldDisabled}
+          readOnly={dateFieldDisabled}
+          aria-readOnly={dateFieldDisabled ? true : undefined}
           min={minDate}
           style={{
             width: "100%",
-            cursor: disabled ? "not-allowed" : "pointer",
+            cursor: disabled || dateFieldDisabled ? "not-allowed" : "pointer",
           }}
         />
       </div>
-      <div style={{ flex: 1 }}>
+      <div style={{ flex: isStacked ? "none" : 1, width: isStacked ? "100%" : undefined }}>
         <label
           style={{
             display: "block",
