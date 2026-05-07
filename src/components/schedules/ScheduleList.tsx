@@ -1,68 +1,37 @@
 "use client";
 
-import { useState, useMemo } from "react";
 import { ScheduleItem } from "./ScheduleItem";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { tokens } from "@/components/theme/tokens";
-import type { ScheduledPostWithFlyerRead } from "@/lib/api/instagram";
+import type {
+  ScheduledPostWithFlyerRead,
+  ScheduledPostsSort,
+  ScheduledPostsStatusFilter,
+} from "@/lib/api/instagram";
 
 type ScheduleListProps = {
   posts: ScheduledPostWithFlyerRead[];
   onRefresh: () => void;
+  filterStatus: ScheduledPostsStatusFilter;
+  sortOption: ScheduledPostsSort;
+  onFilterStatusChange: (value: ScheduledPostsStatusFilter) => void;
+  onSortOptionChange: (value: ScheduledPostsSort) => void;
+  totalPosts: number;
+  isLoading: boolean;
 };
 
-type FilterStatus = "all" | "scheduled" | "posting" | "posted" | "failed" | "pending";
-type SortOption = "scheduled_time_asc" | "scheduled_time_desc" | "status" | "flyer_title";
-
-export function ScheduleList({ posts, onRefresh }: ScheduleListProps) {
-  const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
-  const [sortOption, setSortOption] = useState<SortOption>("scheduled_time_desc");
-
-  const filteredAndSortedPosts = useMemo(() => {
-    // Filter
-    let filtered = posts;
-    if (filterStatus !== "all") {
-      filtered = posts.filter(
-        (post) => post.post_status === filterStatus
-      );
-    }
-
-    // Sort
-    const sorted = [...filtered].sort((a, b) => {
-      switch (sortOption) {
-        case "scheduled_time_asc":
-          const aTime = a.scheduled_at
-            ? new Date(a.scheduled_at).getTime()
-            : 0;
-          const bTime = b.scheduled_at
-            ? new Date(b.scheduled_at).getTime()
-            : 0;
-          return aTime - bTime;
-
-        case "scheduled_time_desc":
-          const aTimeDesc = a.scheduled_at
-            ? new Date(a.scheduled_at).getTime()
-            : 0;
-          const bTimeDesc = b.scheduled_at
-            ? new Date(b.scheduled_at).getTime()
-            : 0;
-          return bTimeDesc - aTimeDesc;
-
-        case "status":
-          return a.post_status.localeCompare(b.post_status);
-
-        case "flyer_title":
-          return a.flyer_title.localeCompare(b.flyer_title);
-
-        default:
-          return 0;
-      }
-    });
-
-    return sorted;
-  }, [posts, filterStatus, sortOption]);
-
-  if (posts.length === 0) {
+export function ScheduleList({
+  posts,
+  onRefresh,
+  filterStatus,
+  sortOption,
+  onFilterStatusChange,
+  onSortOptionChange,
+  totalPosts,
+  isLoading,
+}: ScheduleListProps) {
+  if (posts.length === 0 && !isLoading) {
     return (
       <EmptyState
         title="No scheduled posts"
@@ -95,7 +64,9 @@ export function ScheduleList({ posts, onRefresh }: ScheduleListProps) {
           </label>
           <select
             value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value as FilterStatus)}
+            onChange={(e) =>
+              onFilterStatusChange(e.target.value as ScheduledPostsStatusFilter)
+            }
             style={{
               padding: "8px 12px",
               borderRadius: "6px",
@@ -128,7 +99,9 @@ export function ScheduleList({ posts, onRefresh }: ScheduleListProps) {
           </label>
           <select
             value={sortOption}
-            onChange={(e) => setSortOption(e.target.value as SortOption)}
+            onChange={(e) =>
+              onSortOptionChange(e.target.value as ScheduledPostsSort)
+            }
             style={{
               padding: "8px 12px",
               borderRadius: "6px",
@@ -139,8 +112,8 @@ export function ScheduleList({ posts, onRefresh }: ScheduleListProps) {
               cursor: "pointer",
             }}
           >
-            <option value="scheduled_time_desc">Scheduled Time (Newest First)</option>
-            <option value="scheduled_time_asc">Scheduled Time (Oldest First)</option>
+            <option value="scheduled_at_desc">Scheduled Time (Newest First)</option>
+            <option value="scheduled_at_asc">Scheduled Time (Oldest First)</option>
             <option value="status">Status</option>
             <option value="flyer_title">Flyer Title</option>
           </select>
@@ -156,29 +129,37 @@ export function ScheduleList({ posts, onRefresh }: ScheduleListProps) {
             color: tokens.textSecondary,
           }}
         >
-          Showing {filteredAndSortedPosts.length} of {posts.length} posts
+          Showing {posts.length} of {totalPosts} posts
         </div>
       </div>
 
-      {/* Posts List */}
-      {filteredAndSortedPosts.length === 0 ? (
-        <EmptyState
-          title="No posts match your filter"
-          description="Try adjusting your filter criteria to see more posts."
-        />
-      ) : (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-            gap: "16px",
-          }}
-        >
-          {filteredAndSortedPosts.map((post) => (
-            <ScheduleItem key={post.id} post={post} onCancel={onRefresh} />
-          ))}
-        </div>
-      )}
+      {
+        isLoading ? (
+        <div style={{ minHeight: "260px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <LoadingSpinner message="Loading scheduled posts..." />
+      </div>
+        ) :(
+          posts.length === 0 ? (
+            <EmptyState
+              title="No posts match your filter"
+              description="Try adjusting your filter criteria to see more posts."
+            />
+          ) : (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+                gap: "16px",
+              }}
+            >
+              {posts.map((post) => (
+                <ScheduleItem key={post.id} post={post} onCancel={onRefresh} />
+              ))}
+            </div>
+          )
+        )
+      }
+      
     </div>
   );
 }

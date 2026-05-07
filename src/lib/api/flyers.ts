@@ -168,6 +168,8 @@ export const flyersApi = {
     apiClient.patch<FlyerInformationExtraction>(`/flyers/${id}/extraction`, data),
   generateImages: (id: number) =>
     apiClient.post<{ message: string }>(`/flyers/${id}/generate-images`, {}),
+  retryExtraction: (id: number) =>
+    apiClient.post<{ message: string }>(`/flyers/${id}/retry-extraction`, {}),
   archive: (id: number) => apiClient.post<void>(`/flyers/${id}/archive`, {}),
   delete: (id: number) => apiClient.del<void>(`/flyers/${id}`),
 };

@@ -41,6 +41,7 @@ export function InstagramSchedulingPage({
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
+  const [isRescheduling, setIsRescheduling] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -245,6 +246,33 @@ export function InstagramSchedulingPage({
       setError(err instanceof Error ? err.message : "An unexpected error occurred");
     } finally {
       setIsCanceling(false);
+    }
+  }
+
+  async function handleRescheduleFailedCarousel() {
+    setIsRescheduling(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const result = await instagramApi.rescheduleFailedCarousel(flyer.id);
+
+      if (result.ok) {
+        setCarouselPost(null);
+        setSelectedTimeDateImageId(null);
+        setSelectedLocationImageId(null);
+        setHashtags("");
+        setPostingMode("now");
+        generateDefaultCaption();
+        setSuccess("Failed carousel reset. Please select images and schedule again.");
+      } else {
+        setError(result.error.message || "Failed to reset failed carousel post");
+      }
+    } catch (err) {
+      console.error("Error resetting failed carousel:", err);
+      setError(err instanceof Error ? err.message : "An unexpected error occurred");
+    } finally {
+      setIsRescheduling(false);
     }
   }
 
@@ -482,6 +510,24 @@ export function InstagramSchedulingPage({
             >
               Carousel Post Status
             </h3>
+            {carouselPost.post_status === "failed" && (
+              <button
+                onClick={handleRescheduleFailedCarousel}
+                disabled={isRescheduling}
+                style={{
+                  padding: "8px 16px",
+                  backgroundColor: tokens.accent,
+                  color: "white",
+                  border: "none",
+                  borderRadius: "8px",
+                  cursor: isRescheduling ? "not-allowed" : "pointer",
+                  fontSize: "14px",
+                  fontWeight: 500,
+                }}
+              >
+                {isRescheduling ? "Rescheduling..." : "Reschedule instagram post"}
+              </button>
+            )}
             {carouselPost.post_status === "scheduled" && !isCanceling && (
               <button
                 onClick={handleCancelCarousel}

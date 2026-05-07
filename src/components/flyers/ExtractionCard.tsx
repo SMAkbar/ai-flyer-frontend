@@ -45,6 +45,8 @@ export type ExtractionCardProps = {
   onGenerateImages?: () => void;
   isGeneratingImages?: boolean;
   hasGeneratedImages?: boolean;
+  onRetryExtraction?: () => void;
+  isRetryingExtraction?: boolean;
 };
 
 // Helper function to get confidence status for a field
@@ -283,6 +285,8 @@ export function ExtractionCard({
   onGenerateImages,
   isGeneratingImages = false,
   hasGeneratedImages = false,
+  onRetryExtraction,
+  isRetryingExtraction = false,
 }: ExtractionCardProps) {
   if (!extraction) {
     return (
@@ -613,9 +617,16 @@ export function ExtractionCard({
         </div>
       ) : extraction.status === 'failed' ? (
         <Alert variant="error">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <WarningIcon size={18} />
             <span style={{ fontWeight: 600 }}>Extraction failed</span>
+            </div>
+            {onRetryExtraction && (
+              <Button onClick={onRetryExtraction} disabled={isRetryingExtraction}>
+                {isRetryingExtraction ? 'Retrying extraction...' : 'Retry extraction'}
+              </Button>
+            )}
           </div>
           {extraction.error_message && (
             <p style={{ margin: '8px 0 0 0', fontSize: '14px' }}>{extraction.error_message}</p>
