@@ -37,6 +37,7 @@ export default function FlyerDetailPage() {
   const [editedFields, setEditedFields] = useState<EditedFields>({});
   const [isUpdating, setIsUpdating] = useState(false);
   const [isGeneratingImages, setIsGeneratingImages] = useState(false);
+  const [isRetryingExtraction, setIsRetryingExtraction] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
   const [showWordPressPosting, setShowWordPressPosting] = useState(false);
   const [wordpressPost, setWordpressPost] = useState<WordPressPostRead | null>(null);
@@ -301,6 +302,79 @@ export default function FlyerDetailPage() {
     }
   };
 
+  const handleRetryExtraction = async () => {
+    if (!flyerId) return;
+
+    setIsRetryingExtraction(true);
+    setError(null);
+
+    try {
+      const result = await flyersApi.retryExtraction(flyerId);
+      if (!result.ok) {
+        setError(result.error.message || "Failed to retry extraction");
+        return;
+      }
+
+      setFlyer((prev) => {
+        if (!prev || !prev.information_extraction) return prev;
+        return {
+          ...prev,
+          information_extraction: {
+            ...prev.information_extraction,
+            status: "processing",
+            error_message: null,
+          },
+        };
+      });
+
+      // Poll extraction status after retry starts.
+      const maxAttempts = 60;
+      const pollInterval = 3000;
+      let attempts = 0;
+
+      if (pollingTimeoutRef.current) {
+        clearTimeout(pollingTimeoutRef.current);
+      }
+
+      const pollForExtraction = () => {
+        attempts++;
+        flyersApi.getById(flyerId)
+          .then((pollResult) => {
+            if (!pollResult.ok) {
+              if (attempts < maxAttempts) {
+                pollingTimeoutRef.current = setTimeout(pollForExtraction, pollInterval);
+              }
+              return;
+            }
+
+            const status = pollResult.data.information_extraction?.status;
+            setFlyer(pollResult.data);
+
+            if (status === "completed" || status === "failed" || attempts >= maxAttempts) {
+              if (pollingTimeoutRef.current) {
+                clearTimeout(pollingTimeoutRef.current);
+                pollingTimeoutRef.current = null;
+              }
+              return;
+            }
+
+            pollingTimeoutRef.current = setTimeout(pollForExtraction, pollInterval);
+          })
+          .catch(() => {
+            if (attempts < maxAttempts) {
+              pollingTimeoutRef.current = setTimeout(pollForExtraction, pollInterval);
+            }
+          });
+      };
+
+      pollingTimeoutRef.current = setTimeout(pollForExtraction, pollInterval);
+    } catch {
+      setError("An unexpected error occurred");
+    } finally {
+      setIsRetryingExtraction(false);
+    }
+  };
+
   const handleArchiveFlyer = async () => {
     if (!flyerId || isArchiving) return;
 
@@ -484,6 +558,8 @@ export default function FlyerDetailPage() {
                   hasUnsavedChanges={hasUnsavedChanges()}
                   onGenerateImages={handleGenerateImages}
                   isGeneratingImages={isGeneratingImages}
+                  onRetryExtraction={handleRetryExtraction}
+                  isRetryingExtraction={isRetryingExtraction}
                   hasGeneratedImages={
                     flyer.generated_images !== null &&
                     flyer.generated_images !== undefined &&

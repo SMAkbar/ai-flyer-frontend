@@ -40,8 +40,8 @@ export type SchedulePostRequest = {
 export type SchedulePostResponse = ScheduledPostRead;
 
 export type ScheduledPostsResponse = {
-  flyer_id: number;
-  scheduled_posts: ScheduledPostWithFlyerRead[];
+  items: ScheduledPostWithFlyerRead[];
+  total: number;
 };
 
 export type ScheduledPostWithFlyerRead = InstagramPostRead & {
@@ -54,6 +54,20 @@ export type ScheduledPostWithFlyerRead = InstagramPostRead & {
 export type AllScheduledPostsResponse = {
   scheduled_posts: ScheduledPostWithFlyerRead[];
 };
+
+export type ScheduledPostsSort =
+  | "scheduled_at_desc"
+  | "scheduled_at_asc"
+  | "status"
+  | "flyer_title";
+
+export type ScheduledPostsStatusFilter =
+  | "all"
+  | "pending"
+  | "scheduled"
+  | "posting"
+  | "posted"
+  | "failed";
 
 export type ScheduledPostSlot = {
   timeslot: string;
@@ -115,10 +129,22 @@ export const instagramApi = {
       data
     ),
 
-  getScheduledPosts: (flyerId: number) =>
-    apiClient.get<ScheduledPostsResponse>(
-      `/flyers/${flyerId}/instagram/scheduled`
-    ),
+  getScheduledPosts: (params?: {
+    skip?: number;
+    limit?: number;
+    status?: ScheduledPostsStatusFilter;
+    sort?: ScheduledPostsSort;
+  }) => {
+    const q = new URLSearchParams();
+    if (params?.skip !== undefined) q.set("skip", String(params.skip));
+    if (params?.limit !== undefined) q.set("limit", String(params.limit));
+    if (params?.status) q.set("status", params.status);
+    if (params?.sort) q.set("sort", params.sort);
+    const queryString = q.toString();
+    return apiClient.get<ScheduledPostsResponse>(
+      `/instagram/scheduled${queryString ? `?${queryString}` : ""}`
+    );
+  },
 
   cancelScheduledPost: (flyerId: number, imageId: number) =>
     apiClient.del(`/flyers/${flyerId}/instagram/scheduled/${imageId}`),
@@ -132,8 +158,12 @@ export const instagramApi = {
       connected_at: string | null;
     }>("/instagram/status"),
 
-  getAllScheduledPosts: () =>
-    apiClient.get<AllScheduledPostsResponse>("/instagram/scheduled"),
+  getAllScheduledPosts: (params?: {
+    skip?: number;
+    limit?: number;
+    status?: ScheduledPostsStatusFilter;
+    sort?: ScheduledPostsSort;
+  }) => instagramApi.getScheduledPosts(params),
 
   getScheduledSlotsInRange: (startIso: string, endIso: string) => {
     const q = new URLSearchParams({ start: startIso, end: endIso });
@@ -162,5 +192,8 @@ export const instagramApi = {
 
   cancelCarousel: (flyerId: number) =>
     apiClient.del(`/flyers/${flyerId}/instagram/carousel`),
+
+  rescheduleFailedCarousel: (flyerId: number) =>
+    apiClient.del(`/flyers/${flyerId}/instagram/carousel/reschedule`),
 };
 

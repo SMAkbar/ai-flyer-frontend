@@ -224,10 +224,18 @@ export function ScheduleItem({ post, onCancel }: ScheduleItemProps) {
           )}
           {post.post_error && (
             <div
+              title={post.post_error}
               style={{
                 fontSize: "14px",
                 color: tokens.danger,
                 marginTop: "4px",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                display: "-webkit-box",
+                WebkitLineClamp: 3,
+                WebkitBoxOrient: "vertical",
+                overflowWrap: "anywhere",
+                wordBreak: "break-word",
               }}
             >
               ⚠️ Error: {post.post_error}
