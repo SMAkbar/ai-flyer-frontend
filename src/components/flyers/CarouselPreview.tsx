@@ -6,20 +6,18 @@ import { tokens } from "@/components/theme/tokens";
 import type { FlyerGeneratedImage } from "@/lib/api/flyers";
 
 type CarouselPreviewProps = {
-  timeDateImage: FlyerGeneratedImage | null;
-  performersImage: FlyerGeneratedImage | null;
-  locationImage: FlyerGeneratedImage | null;
+  combinedImage: FlyerGeneratedImage | null;
+  /** Synthetic row for original flyer (e.g. id 0) */
+  originalFlyerImage: FlyerGeneratedImage | null;
 };
 
 export function CarouselPreview({
-  timeDateImage,
-  performersImage,
-  locationImage,
+  combinedImage,
+  originalFlyerImage,
 }: CarouselPreviewProps) {
   const images = [
-    { image: timeDateImage, label: "1. Date", type: "time_date" },
-    { image: performersImage, label: "2. Original Flyer", type: "performers" },
-    { image: locationImage, label: "3. Location", type: "location" },
+    { image: combinedImage, label: "1. Combined", isOriginalFlyer: false },
+    { image: originalFlyerImage, label: "2. Original Flyer", isOriginalFlyer: true },
   ];
 
   const allSelected = images.every((item) => item.image !== null);
@@ -83,7 +81,7 @@ export function CarouselPreview({
             marginBottom: "8px",
           }}
         >
-          These images will be posted as a single carousel post on Instagram. Users can swipe through them in order.
+          These two images will be posted as one carousel on Instagram, in this order.
         </p>
         <div
           style={{
@@ -95,11 +93,9 @@ export function CarouselPreview({
         >
           {images.map((item, index) => {
             if (!item.image) return null;
-            // Use "contain" for original flyer (performers type with id 0) to show full image
-            const isOriginalFlyer = item.type === "performers" && item.image.id === 0;
             return (
               <div
-                key={`${item.type}-${item.image.id}`}
+                key={`${item.label}-${item.image.id}`}
                 style={{
                   display: "flex",
                   flexDirection: "column",
@@ -116,7 +112,7 @@ export function CarouselPreview({
                     borderRadius: "12px",
                     overflow: "hidden",
                     border: `2px solid ${tokens.border}`,
-                    backgroundColor: isOriginalFlyer ? "#000" : tokens.bgHover,
+                    backgroundColor: item.isOriginalFlyer ? "#000" : tokens.bgHover,
                   }}
                 >
                   {item.image.cloudfront_url ? (
@@ -126,7 +122,7 @@ export function CarouselPreview({
                       style={{
                         width: "100%",
                         height: "100%",
-                        objectFit: isOriginalFlyer ? "contain" : "cover",
+                        objectFit: item.isOriginalFlyer ? "contain" : "cover",
                       }}
                     />
                   ) : (
@@ -177,4 +173,3 @@ export function CarouselPreview({
     </Card>
   );
 }
-
