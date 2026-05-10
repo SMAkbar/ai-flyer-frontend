@@ -56,7 +56,7 @@ export type FlyerInformationExtraction = {
   updated_at: string;
 };
 
-export type GeneratedImageType = "time_date" | "performers" | "location";
+export type GeneratedImageType = "time_date" | "performers" | "location" | "combined";
 
 export type ImageGenerationStatus = "requested" | "generating" | "generated" | "failed";
 

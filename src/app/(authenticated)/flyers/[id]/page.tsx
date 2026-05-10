@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { PageLayout } from "@/components/ui/PageLayout";
 import { Container } from "@/components/ui/Container";
@@ -20,6 +20,27 @@ type AdjacentFlyers = {
   next: FlyerRead | null;
 };
 
+// Background polling: while any image is being generated or the extraction is
+// still in flight, silently re-fetch the flyer so the UI updates without the
+// user refreshing the page.
+const BACKGROUND_POLL_INTERVAL_MS = 3000;
+const BACKGROUND_POLL_MAX_DURATION_MS = 5 * 60 * 1000;
+
+function hasInFlightImageGeneration(flyer: FlyerDetailRead | null): boolean {
+  return Boolean(
+    flyer?.generated_images?.some(
+      (img) =>
+        img.generation_status === "requested" ||
+        img.generation_status === "generating"
+    )
+  );
+}
+
+function hasInFlightExtraction(flyer: FlyerDetailRead | null): boolean {
+  const status = flyer?.information_extraction?.status;
+  return status === "pending" || status === "processing";
+}
+
 export default function FlyerDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -36,13 +57,20 @@ export default function FlyerDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [editedFields, setEditedFields] = useState<EditedFields>({});
   const [isUpdating, setIsUpdating] = useState(false);
-  const [isGeneratingImages, setIsGeneratingImages] = useState(false);
-  const [isRetryingExtraction, setIsRetryingExtraction] = useState(false);
+  // Transient flags for the brief window between clicking an action and the
+  // server responding. After that, "in-flight" state is derived from the
+  // flyer payload itself so the UI stays correct across page reloads.
+  const [isStartingGeneration, setIsStartingGeneration] = useState(false);
+  const [isStartingRetry, setIsStartingRetry] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
   const [showWordPressPosting, setShowWordPressPosting] = useState(false);
   const [wordpressPost, setWordpressPost] = useState<WordPressPostRead | null>(null);
   const [adjacentFlyers, setAdjacentFlyers] = useState<AdjacentFlyers>({ prev: null, next: null });
-  const pollingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const imagesInFlight = useMemo(() => hasInFlightImageGeneration(flyer), [flyer]);
+  const extractionInFlight = useMemo(() => hasInFlightExtraction(flyer), [flyer]);
+  const isGeneratingImages = isStartingGeneration || imagesInFlight;
+  const isRetryingExtraction = isStartingRetry || extractionInFlight;
 
   useEffect(() => {
     if (flyerId) {
@@ -52,14 +80,45 @@ export default function FlyerDetailPage() {
       loadWordPressPost();
       loadAdjacentFlyers();
     }
-    
-    // Cleanup polling timeout on unmount
-    return () => {
-      if (pollingTimeoutRef.current) {
-        clearTimeout(pollingTimeoutRef.current);
+  }, [flyerId, filterStatus, searchQuery, sortOption]);
+
+  // Auto-poll the flyer while there is in-flight work. The effect re-evaluates
+  // whenever those derived flags change, so polling stops automatically once
+  // every image has reached a terminal status and extraction is settled.
+  useEffect(() => {
+    if (!flyerId) return;
+    if (!imagesInFlight && !extractionInFlight) return;
+
+    let cancelled = false;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    const startedAt = Date.now();
+
+    const tick = async () => {
+      if (cancelled) return;
+      if (Date.now() - startedAt > BACKGROUND_POLL_MAX_DURATION_MS) return;
+
+      try {
+        const result = await flyersApi.getById(flyerId);
+        if (cancelled) return;
+        if (result.ok) {
+          setFlyer(result.data);
+        }
+      } catch {
+        // Swallow transient network errors and retry on the next tick.
+      }
+
+      if (!cancelled) {
+        timeoutId = setTimeout(tick, BACKGROUND_POLL_INTERVAL_MS);
       }
     };
-  }, [flyerId, filterStatus, searchQuery, sortOption]);
+
+    timeoutId = setTimeout(tick, BACKGROUND_POLL_INTERVAL_MS);
+
+    return () => {
+      cancelled = true;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [flyerId, imagesInFlight, extractionInFlight]);
 
   async function loadAdjacentFlyers() {
     if (!flyerId) return;
@@ -99,24 +158,34 @@ export default function FlyerDetailPage() {
     }
   }
 
-  async function loadFlyer() {
+  async function loadFlyer(options?: { silent?: boolean }) {
     if (!flyerId) return;
 
-    setIsLoading(true);
-    setError(null);
+    const silent = options?.silent ?? false;
+    // A silent refresh keeps the existing page rendered (per-image
+    // "Generating…" cards remain visible) instead of swapping in the
+    // full-page loader.
+    if (!silent) {
+      setIsLoading(true);
+      setError(null);
+    }
 
     try {
       const result = await flyersApi.getById(flyerId);
 
       if (result.ok) {
         setFlyer(result.data);
-      } else {
+      } else if (!silent) {
         setError(result.error.message || "Failed to load flyer");
       }
-    } catch (err) {
-      setError("An unexpected error occurred");
+    } catch {
+      if (!silent) {
+        setError("An unexpected error occurred");
+      }
     } finally {
-      setIsLoading(false);
+      if (!silent) {
+        setIsLoading(false);
+      }
     }
   }
 
@@ -230,82 +299,33 @@ export default function FlyerDetailPage() {
   const handleGenerateImages = async () => {
     if (!flyerId || !flyer?.information_extraction) return;
 
-    setIsGeneratingImages(true);
+    setIsStartingGeneration(true);
     setError(null);
 
     try {
       const result = await flyersApi.generateImages(flyerId);
 
-      if (result.ok) {
-        // Poll for images - check every 3 seconds up to 60 times (3 minutes max)
-        // Image generation can take 30-90 seconds for multiple images
-        const maxAttempts = 60;
-        const pollInterval = 3000; // 3 seconds
-        let attempts = 0;
-        
-        // Clear any existing polling timeout
-        if (pollingTimeoutRef.current) {
-          clearTimeout(pollingTimeoutRef.current);
-        }
-        
-        const pollForImages = () => {
-          attempts++;
-          flyersApi.getById(flyerId).then((pollResult) => {
-            if (pollResult.ok && pollResult.data.generated_images && pollResult.data.generated_images.length > 0) {
-              // Images are ready
-              if (pollingTimeoutRef.current) {
-                clearTimeout(pollingTimeoutRef.current);
-                pollingTimeoutRef.current = null;
-              }
-              setFlyer(pollResult.data);
-              setIsGeneratingImages(false);
-            } else if (attempts < maxAttempts) {
-              // Continue polling
-              pollingTimeoutRef.current = setTimeout(pollForImages, pollInterval);
-            } else {
-              // Give up after max attempts (3 minutes)
-              if (pollingTimeoutRef.current) {
-                clearTimeout(pollingTimeoutRef.current);
-                pollingTimeoutRef.current = null;
-              }
-              setIsGeneratingImages(false);
-              // Still reload to get latest state
-              loadFlyer();
-              // Show a message that it's taking longer than expected
-              setError("Image generation is taking longer than expected. Please refresh the page to check for images.");
-            }
-          }).catch(() => {
-            // On error, stop polling but continue checking
-            if (attempts < maxAttempts) {
-              // Retry on error (network issues, etc.)
-              pollingTimeoutRef.current = setTimeout(pollForImages, pollInterval);
-            } else {
-              // Give up after max attempts
-              if (pollingTimeoutRef.current) {
-                clearTimeout(pollingTimeoutRef.current);
-                pollingTimeoutRef.current = null;
-              }
-              setIsGeneratingImages(false);
-            }
-          });
-        };
-        
-        // Start polling after initial delay
-        pollingTimeoutRef.current = setTimeout(pollForImages, pollInterval);
-      } else {
+      if (!result.ok) {
         setError(result.error.message || "Failed to generate images");
-        setIsGeneratingImages(false);
+        return;
       }
-    } catch (err) {
+
+      // Refresh once (silently — keep the page rendered so the new
+      // per-image "Generating…" cards become the only loading UI). The
+      // background polling effect will keep updating until they reach a
+      // terminal state.
+      await loadFlyer({ silent: true });
+    } catch {
       setError("An unexpected error occurred");
-      setIsGeneratingImages(false);
+    } finally {
+      setIsStartingGeneration(false);
     }
   };
 
   const handleRetryExtraction = async () => {
     if (!flyerId) return;
 
-    setIsRetryingExtraction(true);
+    setIsStartingRetry(true);
     setError(null);
 
     try {
@@ -315,6 +335,8 @@ export default function FlyerDetailPage() {
         return;
       }
 
+      // Optimistically mark extraction as processing so the background
+      // polling effect picks it up immediately.
       setFlyer((prev) => {
         if (!prev || !prev.information_extraction) return prev;
         return {
@@ -326,52 +348,10 @@ export default function FlyerDetailPage() {
           },
         };
       });
-
-      // Poll extraction status after retry starts.
-      const maxAttempts = 60;
-      const pollInterval = 3000;
-      let attempts = 0;
-
-      if (pollingTimeoutRef.current) {
-        clearTimeout(pollingTimeoutRef.current);
-      }
-
-      const pollForExtraction = () => {
-        attempts++;
-        flyersApi.getById(flyerId)
-          .then((pollResult) => {
-            if (!pollResult.ok) {
-              if (attempts < maxAttempts) {
-                pollingTimeoutRef.current = setTimeout(pollForExtraction, pollInterval);
-              }
-              return;
-            }
-
-            const status = pollResult.data.information_extraction?.status;
-            setFlyer(pollResult.data);
-
-            if (status === "completed" || status === "failed" || attempts >= maxAttempts) {
-              if (pollingTimeoutRef.current) {
-                clearTimeout(pollingTimeoutRef.current);
-                pollingTimeoutRef.current = null;
-              }
-              return;
-            }
-
-            pollingTimeoutRef.current = setTimeout(pollForExtraction, pollInterval);
-          })
-          .catch(() => {
-            if (attempts < maxAttempts) {
-              pollingTimeoutRef.current = setTimeout(pollForExtraction, pollInterval);
-            }
-          });
-      };
-
-      pollingTimeoutRef.current = setTimeout(pollForExtraction, pollInterval);
     } catch {
       setError("An unexpected error occurred");
     } finally {
-      setIsRetryingExtraction(false);
+      setIsStartingRetry(false);
     }
   };
 
@@ -575,6 +555,7 @@ export default function FlyerDetailPage() {
                   images={flyer.generated_images}
                   isLoading={isGeneratingImages}
                   isGenerating={isGeneratingImages}
+                  isAutoRefreshing={imagesInFlight}
                 />
                 {flyer.generated_images && flyer.generated_images.length > 0 && (
                   <div style={{ marginTop: "24px", display: "flex", gap: "16px", flexWrap: "wrap" }}>

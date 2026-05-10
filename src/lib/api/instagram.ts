@@ -79,16 +79,22 @@ export type ScheduledPostSlotsInRangeResponse = {
 };
 
 // Carousel post types
+//
+// Today the carousel is posted as 2 slides: [combined image, original flyer].
+// The legacy time_date / performers / location image ids are kept (nullable)
+// so we can flip back to the previous 3-image workflow without an API change.
 export type SelectCarouselRequest = {
-  time_date_image_id: number;
-  performers_image_id: number | null;  // null means use original flyer image
-  location_image_id: number;
+  combined_image_id: number;
+  time_date_image_id: number | null;
+  performers_image_id: number | null;
+  location_image_id: number | null;
 };
 
 export type ScheduleCarouselRequest = {
-  time_date_image_id: number;
-  performers_image_id: number | null;  // null means use original flyer image
-  location_image_id: number;
+  combined_image_id: number;
+  time_date_image_id: number | null;
+  performers_image_id: number | null;
+  location_image_id: number | null;
   scheduled_at: string; // ISO 8601 datetime
   caption: string | null;
   hashtags: string | null;
@@ -97,9 +103,10 @@ export type ScheduleCarouselRequest = {
 export type InstagramCarouselPostRead = {
   id: number;
   flyer_id: number;
-  time_date_image_id: number;
-  performers_image_id: number | null;  // null means using original flyer image
-  location_image_id: number;
+  combined_image_id: number | null;
+  time_date_image_id: number | null;
+  performers_image_id: number | null;
+  location_image_id: number | null;
   post_status: PostStatus;
   instagram_post_id: string | null;
   post_error: string | null;

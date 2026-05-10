@@ -20,9 +20,7 @@ export function InstagramSchedulingPage({
   flyer,
   onBack,
 }: InstagramSchedulingPageProps) {
-  // State for selected images (Date and Location only - Performers is replaced by original flyer)
-  const [selectedTimeDateImageId, setSelectedTimeDateImageId] = useState<number | null>(null);
-  const [selectedLocationImageId, setSelectedLocationImageId] = useState<number | null>(null);
+  const [selectedCombinedImageId, setSelectedCombinedImageId] = useState<number | null>(null);
 
   // State for posting options (shared caption and hashtags for carousel)
   const [caption, setCaption] = useState("");
@@ -119,9 +117,7 @@ export function InstagramSchedulingPage({
 
         // Restore selected images from carousel post
         if (post.post_status !== "posted") {
-          setSelectedTimeDateImageId(post.time_date_image_id);
-          // performers_image_id is no longer used - we use original flyer image
-          setSelectedLocationImageId(post.location_image_id);
+          setSelectedCombinedImageId(post.combined_image_id ?? null);
 
           if (post.scheduled_at) {
             setScheduledAt(post.scheduled_at);
@@ -152,21 +148,17 @@ export function InstagramSchedulingPage({
     }
   }
 
-  function handleSelectImage(category: GeneratedImageType, imageId: number) {
-    switch (category) {
-      case "time_date":
-        setSelectedTimeDateImageId(imageId);
-        break;
-      case "location":
-        setSelectedLocationImageId(imageId);
-        break;
-    }
+  function handleSelectCombined(imageId: number) {
+    setSelectedCombinedImageId(imageId);
   }
 
   async function handleSubmit() {
-    // Validate Date and Location images are selected
-    if (!selectedTimeDateImageId || !selectedLocationImageId) {
-      setError("Please select one image from Date and Location categories");
+    if (!selectedCombinedImageId) {
+      setError("Please select a combined promotional image for the first carousel slide");
+      return;
+    }
+    if (!flyer.cloudfront_url) {
+      setError("This flyer has no image URL; cannot build the carousel");
       return;
     }
 
@@ -181,16 +173,18 @@ export function InstagramSchedulingPage({
     setSuccess(null);
 
     try {
-      // Schedule carousel post (performers_image_id is null to use original flyer)
-      // For "now", set to 1 minute in the past so cron job picks it up immediately
       const scheduledDateTime = postingMode === "now" 
         ? new Date(Date.now() - 60000).toISOString() // 1 minute ago
         : scheduledAt;
 
       const result = await instagramApi.scheduleCarousel(flyer.id, {
-        time_date_image_id: selectedTimeDateImageId,
-        performers_image_id: null,  // Use original flyer image
-        location_image_id: selectedLocationImageId,
+        combined_image_id: selectedCombinedImageId,
+        // Legacy fields kept in the payload (sent as null) so the previous
+        // 3-image workflow can be restored without an API change. The UI for
+        // selecting these images is hidden today.
+        time_date_image_id: null,
+        performers_image_id: null,
+        location_image_id: null,
         scheduled_at: scheduledDateTime,
         caption: caption || null,
         hashtags: hashtags || null,
@@ -235,8 +229,7 @@ export function InstagramSchedulingPage({
         setSuccess("Carousel post canceled successfully");
         setCarouselPost(null);
         // Reset selections
-        setSelectedTimeDateImageId(null);
-        setSelectedLocationImageId(null);
+        setSelectedCombinedImageId(null);
         setPostingMode("now");
       } else {
         setError(result.error.message || "Failed to cancel carousel post");
@@ -259,8 +252,7 @@ export function InstagramSchedulingPage({
 
       if (result.ok) {
         setCarouselPost(null);
-        setSelectedTimeDateImageId(null);
-        setSelectedLocationImageId(null);
+        setSelectedCombinedImageId(null);
         setHashtags("");
         setPostingMode("now");
         generateDefaultCaption();
@@ -276,30 +268,25 @@ export function InstagramSchedulingPage({
     }
   }
 
-  // Get selected image objects for preview
-  const selectedTimeDateImage = generatedImages.find(
-    (img) => img.id === selectedTimeDateImageId
-  ) || null;
-  // Original flyer image is used for the middle slide
-  const originalFlyerImage: FlyerGeneratedImage | null = flyer.cloudfront_url ? {
-    id: 0,  // Special ID for original flyer
-    flyer_id: flyer.id,
-    image_type: "performers" as GeneratedImageType,
-    cloudfront_url: flyer.cloudfront_url,
-    generation_status: "generated",
-    generation_error: null,
-    created_at: flyer.created_at,
-    updated_at: flyer.created_at,
-  } : null;
-  const selectedLocationImage = generatedImages.find(
-    (img) => img.id === selectedLocationImageId
-  ) || null;
+  const selectedCombinedImage =
+    generatedImages.find((img) => img.id === selectedCombinedImageId) || null;
+  const originalFlyerImage: FlyerGeneratedImage | null = flyer.cloudfront_url
+    ? {
+        id: 0,
+        flyer_id: flyer.id,
+        image_type: "performers" as GeneratedImageType,
+        cloudfront_url: flyer.cloudfront_url,
+        generation_status: "generated",
+        generation_error: null,
+        created_at: flyer.created_at,
+        updated_at: flyer.created_at,
+      }
+    : null;
 
-  // Check if carousel is posted
   const isCarouselPosted = carouselPost?.post_status === "posted";
 
-  // Check if all images are selected (Date and Location required, original flyer is always used)
-  const allImagesSelected = selectedTimeDateImageId && selectedLocationImageId;
+  const readyToSchedule =
+    Boolean(selectedCombinedImageId) && Boolean(flyer.cloudfront_url);
 
   return (
     <div
@@ -329,7 +316,7 @@ export function InstagramSchedulingPage({
             margin: 0,
           }}
         >
-          Select one image from each category to create a swipeable carousel post on Instagram
+          Choose a combined promotional image for the first slide; the original flyer is the second slide.
         </p>
       </div>
 
@@ -345,18 +332,6 @@ export function InstagramSchedulingPage({
           {success}
         </Alert>
       )}
-
-      {/* Image Category Sections */}
-      <ImageCategorySection
-        categoryType="time_date"
-        categoryLabel="Time/Date"
-        images={generatedImages}
-        selectedImageId={selectedTimeDateImageId}
-        onSelectImage={(id) => handleSelectImage("time_date", id)}
-        disabled={isSubmitting || isCarouselPosted}
-        postedImageIds={new Set()}
-        isPosted={false}
-      />
 
       {/* Original Flyer Image Section (Read-only) */}
       <Card style={{ padding: "24px" }}>
@@ -377,7 +352,7 @@ export function InstagramSchedulingPage({
             marginBottom: "16px",
           }}
         >
-          This image will be used as the second slide in your carousel
+          This image is always the second slide in your carousel
         </p>
         <div
           style={{
@@ -444,27 +419,24 @@ export function InstagramSchedulingPage({
       </Card>
 
       <ImageCategorySection
-        categoryType="location"
-        categoryLabel="Location"
+        categoryType="combined"
+        categoryLabel="Combined"
         images={generatedImages}
-        selectedImageId={selectedLocationImageId}
-        onSelectImage={(id) => handleSelectImage("location", id)}
+        selectedImageId={selectedCombinedImageId}
+        onSelectImage={handleSelectCombined}
         disabled={isSubmitting || isCarouselPosted}
         postedImageIds={new Set()}
         isPosted={false}
       />
 
-      {/* Carousel Preview */}
-      {allImagesSelected && (
+      {readyToSchedule && (
         <CarouselPreview
-          timeDateImage={selectedTimeDateImage}
-          performersImage={originalFlyerImage}
-          locationImage={selectedLocationImage}
+          combinedImage={selectedCombinedImage}
+          originalFlyerImage={originalFlyerImage}
         />
       )}
 
-      {/* Posting Options - Only show if all images selected and no carousel post exists yet */}
-      {allImagesSelected && !carouselPost && (
+      {readyToSchedule && !carouselPost && (
         <PostingOptionsCard
           caption={caption}
           hashtags={hashtags}

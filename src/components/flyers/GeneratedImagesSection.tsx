@@ -2,7 +2,6 @@
 
 import React from "react";
 import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
 import { GeneratedImageCard } from "@/components/flyers/GeneratedImageCard";
 import { tokens } from "@/components/theme/tokens";
 import { ImageIcon } from "@/components/icons";
@@ -12,14 +11,20 @@ type GeneratedImagesSectionProps = {
   images: FlyerGeneratedImage[] | null | undefined;
   isLoading?: boolean;
   isGenerating?: boolean;
+  /**
+   * True when the parent is silently re-fetching the flyer because at least
+   * one image is still in `requested`/`generating` status. Renders a subtle
+   * pulsing badge so users know the page will update on its own.
+   */
+  isAutoRefreshing?: boolean;
 };
 
 export function GeneratedImagesSection({
   images,
   isLoading = false,
   isGenerating = false,
+  isAutoRefreshing = false,
 }: GeneratedImagesSectionProps) {
-  // Loading state - only show when actively generating (not just when no images exist)
   if (isLoading && isGenerating) {
     return (
       <Card
@@ -39,7 +44,7 @@ export function GeneratedImagesSection({
             letterSpacing: "-0.01em",
           }}
         >
-          Generated Promotional Images
+          Combined Promotional Image
         </h2>
         <p
           style={{
@@ -49,7 +54,7 @@ export function GeneratedImagesSection({
             fontStyle: "italic",
           }}
         >
-          The original flyer will be used as the third image in the carousel.
+          Generating the combined layout used for Instagram carousel scheduling.
         </p>
         <div
           style={{
@@ -98,7 +103,6 @@ export function GeneratedImagesSection({
     );
   }
 
-  // Empty state
   if (!images || images.length === 0) {
     return (
       <Card
@@ -118,7 +122,7 @@ export function GeneratedImagesSection({
             letterSpacing: "-0.01em",
           }}
         >
-          Generated Promotional Images
+          Combined Promotional Image
         </h2>
         <div
           style={{
@@ -153,7 +157,7 @@ export function GeneratedImagesSection({
               color: tokens.textPrimary,
             }}
           >
-            No promotional images generated yet
+            No images yet
           </p>
           <p
             style={{
@@ -165,21 +169,21 @@ export function GeneratedImagesSection({
               marginRight: "auto",
             }}
           >
-            Promotional images haven't been generated yet. Use the button above to generate them manually.
+            Generate promotional images above. The combined layout will appear here for scheduling to Instagram.
           </p>
         </div>
       </Card>
     );
   }
 
-  // Sort images by creation date (newest first)
-  const sortedImages = [...images].sort((a, b) => {
-    const dateA = new Date(a.created_at).getTime();
-    const dateB = new Date(b.created_at).getTime();
-    return dateB - dateA; // Newest first
-  });
+  const combinedImages = [...images]
+    .filter((image) => image.image_type === "combined")
+    .sort((a, b) => {
+      const dateA = new Date(a.created_at).getTime();
+      const dateB = new Date(b.created_at).getTime();
+      return dateB - dateA;
+    });
 
-  // Images available
   return (
     <Card
       style={{
@@ -195,6 +199,8 @@ export function GeneratedImagesSection({
           alignItems: "center",
           justifyContent: "space-between",
           marginBottom: "8px",
+          gap: "12px",
+          flexWrap: "wrap",
         }}
       >
         <h2
@@ -206,19 +212,25 @@ export function GeneratedImagesSection({
             letterSpacing: "-0.01em",
           }}
         >
-          Generated Promotional Images
+          Combined Promotional Image
         </h2>
-        <div
-          style={{
-            fontSize: "14px",
-            color: tokens.textSecondary,
-            fontWeight: 500,
-            padding: "4px 12px",
-            backgroundColor: tokens.bgHover,
-            borderRadius: "6px",
-          }}
-        >
-          {sortedImages.length} {sortedImages.length === 1 ? "image" : "images"}
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          {isAutoRefreshing && <AutoRefreshBadge />}
+          {combinedImages.length > 0 && (
+            <div
+              style={{
+                fontSize: "14px",
+                color: tokens.textSecondary,
+                fontWeight: 500,
+                padding: "4px 12px",
+                backgroundColor: tokens.bgHover,
+                borderRadius: "6px",
+              }}
+            >
+              {combinedImages.length}{" "}
+              {combinedImages.length === 1 ? "version" : "versions"}
+            </div>
+          )}
         </div>
       </div>
       <p
@@ -229,20 +241,74 @@ export function GeneratedImagesSection({
           fontStyle: "italic",
         }}
       >
-        The original flyer will be used as the third image in the carousel.
+        Used as the first slide when you schedule an Instagram carousel; the original flyer is the second slide.
       </p>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 300px), 1fr))",
-          gap: "20px",
-        }}
-      >
-        {sortedImages.map((image) => (
-          <GeneratedImageCard key={image.id} image={image} />
-        ))}
-      </div>
+      {combinedImages.length === 0 ? (
+        <div
+          style={{
+            textAlign: "center",
+            padding: "32px 16px",
+            backgroundColor: tokens.bgHover,
+            borderRadius: "12px",
+            border: `1px solid ${tokens.border}`,
+            color: tokens.textSecondary,
+            fontSize: "14px",
+          }}
+        >
+          No combined image yet. Other generated variants are hidden here; generate or refresh to create the combined layout.
+        </div>
+      ) : (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 300px), 1fr))",
+            gap: "20px",
+          }}
+        >
+          {combinedImages.map((image) => (
+            <GeneratedImageCard key={image.id} image={image} />
+          ))}
+        </div>
+      )}
     </Card>
   );
 }
 
+function AutoRefreshBadge() {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "8px",
+        fontSize: "12px",
+        color: tokens.textSecondary,
+        fontWeight: 500,
+        padding: "4px 10px",
+        backgroundColor: tokens.bgHover,
+        border: `1px solid ${tokens.border}`,
+        borderRadius: "999px",
+      }}
+    >
+      <span
+        aria-hidden="true"
+        style={{
+          width: "8px",
+          height: "8px",
+          borderRadius: "50%",
+          backgroundColor: tokens.accent,
+          animation: "auto-refresh-pulse 1.4s ease-in-out infinite",
+        }}
+      />
+      Auto-refreshing…
+      <style>{`
+        @keyframes auto-refresh-pulse {
+          0%, 100% { opacity: 0.35; transform: scale(0.85); }
+          50% { opacity: 1; transform: scale(1); }
+        }
+      `}</style>
+    </div>
+  );
+}

@@ -18,6 +18,8 @@ const getImageTypeLabel = (type: string): string => {
       return "Performers";
     case "location":
       return "Location";
+    case "combined":
+      return "Combined";
     default:
       return type;
   }
