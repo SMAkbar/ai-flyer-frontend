@@ -25,7 +25,10 @@ export function GeneratedImagesSection({
   isGenerating = false,
   isAutoRefreshing = false,
 }: GeneratedImagesSectionProps) {
-  if (isLoading && isGenerating) {
+  // Full-section skeleton only when there are no generated-image rows yet.
+  // If we already have rows (e.g. regenerate), keep the card grid so per-image
+  // spinners and the inline combined placeholder below stay visible.
+  if (isGenerating && (!images || images.length === 0)) {
     return (
       <Card
         style={{
@@ -244,6 +247,42 @@ export function GeneratedImagesSection({
         Used as the first slide when you schedule an Instagram carousel; the original flyer is the second slide.
       </p>
       {combinedImages.length === 0 ? (
+        isGenerating || isLoading ? (
+          <div
+            style={{
+              textAlign: "center",
+              padding: "48px 24px",
+              backgroundColor: tokens.bgHover,
+              borderRadius: "12px",
+              border: `1px solid ${tokens.border}`,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "16px",
+            }}
+          >
+            <div
+              style={{
+                width: "40px",
+                height: "40px",
+                border: `3px solid ${tokens.border}`,
+                borderTopColor: tokens.accent,
+                borderRadius: "50%",
+                animation: "combined-inline-spin 1s linear infinite",
+              }}
+            />
+            <p style={{ margin: 0, fontSize: "14px", color: tokens.textSecondary, fontWeight: 500 }}>
+              Generating combined layout…
+            </p>
+            <style>{`
+              @keyframes combined-inline-spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+              }
+            `}</style>
+          </div>
+        ) : (
         <div
           style={{
             textAlign: "center",
@@ -257,6 +296,7 @@ export function GeneratedImagesSection({
         >
           No combined image yet. Other generated variants are hidden here; generate or refresh to create the combined layout.
         </div>
+        )
       ) : (
         <div
           style={{

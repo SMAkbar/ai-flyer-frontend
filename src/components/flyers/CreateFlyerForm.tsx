@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, FormEvent, ChangeEvent } from "react";
+import React, { useState, useMemo, FormEvent, ChangeEvent } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { tokens } from "@/components/theme/tokens";
+import type { FlyerBulkHashCheckResponse } from "@/lib/api/flyers";
 
 type ImagePreview = {
   file: File;
@@ -15,10 +16,10 @@ export type DuplicateFlyerPrompt = {
   existing_flyer: { id: number; title: string } | null;
 };
 
-export type BulkDuplicateFlyerPrompt = {
-  matches_in_db_count: number;
-  duplicates_in_request_count: number;
-};
+export type BulkDuplicateFlyerPrompt = Pick<
+  FlyerBulkHashCheckResponse,
+  "matches_in_db" | "duplicates_in_request"
+>;
 
 type CreateFlyerFormProps = {
   onSubmit: (formData: FormData) => Promise<void>;
@@ -85,16 +86,6 @@ export function CreateFlyerForm({
     });
   };
 
-  const removeImage = (index: number) => {
-    setImages((prev) => prev.filter((_, i) => i !== index));
-    setError(null);
-  };
-
-  const clearAllImages = () => {
-    setImages([]);
-    setError(null);
-  };
-
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
@@ -115,6 +106,40 @@ export function CreateFlyerForm({
   }
 
   const duplicateActive = Boolean(duplicatePrompt || bulkDuplicatePrompt);
+
+  const bulkDuplicateFilenames = useMemo(() => {
+    if (!bulkDuplicatePrompt) return new Set<string>();
+    const names = new Set<string>();
+    for (const m of bulkDuplicatePrompt.matches_in_db) {
+      for (const f of m.filenames) names.add(f);
+    }
+    for (const d of bulkDuplicatePrompt.duplicates_in_request) {
+      for (const f of d.filenames) names.add(f);
+    }
+    return names;
+  }, [bulkDuplicatePrompt]);
+
+  const removeImage = (index: number) => {
+    const removed = images[index];
+    const shouldResetBulkDuplicate =
+      Boolean(bulkDuplicatePrompt && removed && bulkDuplicateFilenames.has(removed.file.name));
+    const shouldResetSingleDuplicate = Boolean(duplicatePrompt && removed);
+
+    if (shouldResetBulkDuplicate || shouldResetSingleDuplicate) {
+      onDismissDuplicate?.();
+    }
+
+    setImages((prev) => prev.filter((_, i) => i !== index));
+    setError(null);
+  };
+
+  const clearAllImages = () => {
+    if (bulkDuplicatePrompt || duplicatePrompt) {
+      onDismissDuplicate?.();
+    }
+    setImages([]);
+    setError(null);
+  };
 
   function FormField({
     label,
@@ -327,14 +352,20 @@ export function CreateFlyerForm({
                     gap: "16px",
                   }}
                 >
-                  {images.map((img, index) => (
+                  {images.map((img, index) => {
+                    const isBulkDup =
+                      Boolean(bulkDuplicatePrompt) &&
+                      bulkDuplicateFilenames.has(img.file.name);
+                    return (
                     <div
                       key={index}
                       style={{
                         position: "relative",
                         borderRadius: "12px",
                         overflow: "hidden",
-                        border: `1px solid ${tokens.border}`,
+                        border: isBulkDup
+                          ? `2px solid ${tokens.danger}`
+                          : `1px solid ${tokens.border}`,
                         backgroundColor: tokens.bgHover,
                       }}
                     >
@@ -393,7 +424,8 @@ export function CreateFlyerForm({
                         ×
                       </button>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -423,7 +455,7 @@ export function CreateFlyerForm({
                 color: tokens.textPrimary,
               }}
             >
-              Possible duplicate image
+              {bulkDuplicatePrompt ? "Possible duplicate images" : "Possible duplicate image"}
             </h2>
             <p style={{ margin: "0 0 16px 0", lineHeight: 1.5, color: tokens.textSecondary }}>
               {duplicatePrompt?.existing_flyer ? (
@@ -437,9 +469,64 @@ export function CreateFlyerForm({
                 </>
               ) : bulkDuplicatePrompt ? (
                 <>
-                  We found duplicate flyers in this bulk upload (
-                  {bulkDuplicatePrompt.matches_in_db_count} matching existing flyers).
-                  Do you want to continue anyway?
+                  <span style={{ display: "block", marginBottom: "12px" }}>
+                    We found issues with this bulk upload. Files below are outlined in red in the
+                    preview grid. You can remove them and try again, or upload anyway.
+                  </span>
+                  {bulkDuplicatePrompt.matches_in_db.length > 0 && (
+                    <span style={{ display: "block", marginBottom: "10px" }}>
+                      <strong style={{ color: tokens.textPrimary }}>
+                        Already in your library
+                      </strong>
+                      <ul
+                        style={{
+                          margin: "8px 0 0 0",
+                          paddingLeft: "20px",
+                          color: tokens.textSecondary,
+                        }}
+                      >
+                        {bulkDuplicatePrompt.matches_in_db.flatMap((row) =>
+                          row.filenames.map((name) => (
+                            <li key={`${row.flyer_hash}-${name}`} style={{ marginBottom: "4px" }}>
+                              <span style={{ color: tokens.textPrimary }}>{name}</span>
+                              {" — same image as "}
+                              <strong style={{ color: tokens.textPrimary }}>
+                                {row.existing_flyer_title ?? "Untitled"}
+                              </strong>
+                              {" (id "}
+                              {row.existing_flyer_id}
+                              {")"}
+                            </li>
+                          ))
+                        )}
+                      </ul>
+                    </span>
+                  )}
+                  {bulkDuplicatePrompt.duplicates_in_request.length > 0 && (
+                    <span style={{ display: "block", marginBottom: "10px" }}>
+                      <strong style={{ color: tokens.textPrimary }}>
+                        Same image more than once in this upload
+                      </strong>
+                      <ul
+                        style={{
+                          margin: "8px 0 0 0",
+                          paddingLeft: "20px",
+                          color: tokens.textSecondary,
+                        }}
+                      >
+                        {bulkDuplicatePrompt.duplicates_in_request.map((row) => (
+                          <li key={row.flyer_hash} style={{ marginBottom: "4px" }}>
+                            {row.filenames.join(", ")}
+                            {" — same image appears "}
+                            {row.filenames.length} times in this selection
+                          </li>
+                        ))}
+                      </ul>
+                    </span>
+                  )}
+                  <span style={{ display: "block", marginTop: "4px" }}>
+                    Do you want to continue anyway?
+                  </span>
                 </>
               ) : (
                 <>
