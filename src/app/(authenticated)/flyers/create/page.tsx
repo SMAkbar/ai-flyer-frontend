@@ -58,17 +58,9 @@ export default function CreateFlyerPage() {
           return;
         }
         if (duplicateCheck.data.has_duplicates) {
-          const matchesInDbCount = duplicateCheck.data.matches_in_db.reduce(
-            (acc, item) => acc + item.filenames.length,
-            0
-          );
-          const duplicatesInRequestCount = duplicateCheck.data.duplicates_in_request.reduce(
-            (acc, item) => acc + item.filenames.length,
-            0
-          );
           setBulkDuplicatePrompt({
-            matches_in_db_count: matchesInDbCount,
-            duplicates_in_request_count: duplicatesInRequestCount,
+            matches_in_db: duplicateCheck.data.matches_in_db,
+            duplicates_in_request: duplicateCheck.data.duplicates_in_request,
           });
           setPendingBulkFiles(images);
           return;

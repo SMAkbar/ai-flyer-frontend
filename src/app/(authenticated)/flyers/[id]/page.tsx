@@ -25,6 +25,9 @@ type AdjacentFlyers = {
 // user refreshing the page.
 const BACKGROUND_POLL_INTERVAL_MS = 3000;
 const BACKGROUND_POLL_MAX_DURATION_MS = 5 * 60 * 1000;
+/** After POST /generate-images, the worker creates rows asynchronously; poll until we see them so polling can start. */
+const POST_GENERATE_POLL_INTERVAL_MS = 350;
+const POST_GENERATE_POLL_MAX_MS = 15_000;
 
 function hasInFlightImageGeneration(flyer: FlyerDetailRead | null): boolean {
   return Boolean(
@@ -39,6 +42,21 @@ function hasInFlightImageGeneration(flyer: FlyerDetailRead | null): boolean {
 function hasInFlightExtraction(flyer: FlyerDetailRead | null): boolean {
   const status = flyer?.information_extraction?.status;
   return status === "pending" || status === "processing";
+}
+
+async function refreshUntilImageGenerationInFlight(
+  flyerId: number,
+  setFlyerData: (data: FlyerDetailRead) => void
+): Promise<void> {
+  const started = Date.now();
+  while (Date.now() - started < POST_GENERATE_POLL_MAX_MS) {
+    const result = await flyersApi.getById(flyerId);
+    if (result.ok) {
+      setFlyerData(result.data);
+      if (hasInFlightImageGeneration(result.data)) return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, POST_GENERATE_POLL_INTERVAL_MS));
+  }
 }
 
 export default function FlyerDetailPage() {
@@ -310,11 +328,12 @@ export default function FlyerDetailPage() {
         return;
       }
 
-      // Refresh once (silently — keep the page rendered so the new
-      // per-image "Generating…" cards become the only loading UI). The
-      // background polling effect will keep updating until they reach a
-      // terminal state.
+      // Refresh once, then poll until the worker has created at least one
+      // requested/generating row. Otherwise imagesInFlight stays false, the
+      // background poll effect never starts, and the UI looks idle until a
+      // manual refresh (combined runs last, so this gap is easy to hit).
       await loadFlyer({ silent: true });
+      await refreshUntilImageGenerationInFlight(flyerId, setFlyer);
     } catch {
       setError("An unexpected error occurred");
     } finally {
