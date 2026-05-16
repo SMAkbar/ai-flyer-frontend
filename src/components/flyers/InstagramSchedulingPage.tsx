@@ -89,6 +89,10 @@ export function InstagramSchedulingPage({
       if (extraction.venue_name) {
         parts.push(`🏢 ${extraction.venue_name}`);
       }
+      
+      if (extraction.country) {
+        parts.push(`🌍 ${extraction.country}`);
+      }
 
       if (extraction.performers_djs_soundsystems) {
         parts.push(`🎵 ${extraction.performers_djs_soundsystems}`);
@@ -99,7 +103,7 @@ export function InstagramSchedulingPage({
     parts.push("Proudly promoting dub events in collaboration with @dubcentralsoundsystem 🤝🔊");
 
     // Add website url at the end
-    parts.push("https://dubevents.club/");
+    parts.push("Website link in bio 🔗");
 
     setCaption(parts.join("\n\n"));
   }
