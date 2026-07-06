@@ -1,7 +1,10 @@
 import type { FlyerRead, ExtractionStatus } from "@/lib/api/flyers";
+import { DEFAULT_FLYER_SORT } from "@/lib/api/flyers";
 
 export type FilterStatus = "all" | ExtractionStatus | "posted" | "extracted";
 export type SortOption = "latest" | "oldest" | "latest_event" | "oldest_event";
+
+export const DEFAULT_SORT_OPTION: SortOption = DEFAULT_FLYER_SORT;
 
 /**
  * Filters and sorts flyers based on status, search query, and sort option.

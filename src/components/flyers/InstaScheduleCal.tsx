@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import type { DayCellContentArg, EventHoveringArg } from "@fullcalendar/core";
+import type { DayCellContentArg, EventHoveringArg, DatesSetArg } from "@fullcalendar/core";
 import type { DateClickArg } from "@fullcalendar/interaction";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -141,38 +141,42 @@ export function InstaScheduleCal({
   );
   const slotsRequestIdRef = useRef(0);
 
-  useEffect(() => {
-    if (disabled) {
-      setScheduledSlots([]);
-      setSlotsLoading(false);
-      return;
-    }
-
-    const requestId = ++slotsRequestIdRef.current;
-    setSlotsLoading(true);
-
-    const now = new Date();
-    const rangeStart = new Date(now);
-    rangeStart.setDate(rangeStart.getDate() - 14);
-    const rangeEnd = new Date(now);
-    rangeEnd.setMonth(rangeEnd.getMonth() + 1);
-
-    void (async () => {
-      const res = await instagramApi.getScheduledSlotsInRange(
-        rangeStart.toISOString(),
-        rangeEnd.toISOString()
-      );
-
-      if (slotsRequestIdRef.current !== requestId) return;
-
-      setSlotsLoading(false);
-      if (res.ok) {
-        setScheduledSlots(res.data.slots);
-      } else {
+  const loadSlotsForRange = useCallback(
+    (rangeStart: Date, rangeEnd: Date) => {
+      if (disabled) {
         setScheduledSlots([]);
+        setSlotsLoading(false);
+        return;
       }
-    })();
-  }, [disabled]);
+
+      const requestId = ++slotsRequestIdRef.current;
+      setSlotsLoading(true);
+
+      void (async () => {
+        const res = await instagramApi.getScheduledSlotsInRange(
+          rangeStart.toISOString(),
+          rangeEnd.toISOString()
+        );
+
+        if (slotsRequestIdRef.current !== requestId) return;
+
+        setSlotsLoading(false);
+        if (res.ok) {
+          setScheduledSlots(res.data.slots);
+        } else {
+          setScheduledSlots([]);
+        }
+      })();
+    },
+    [disabled]
+  );
+
+  const handleDatesSet = useCallback(
+    (arg: DatesSetArg) => {
+      loadSlotsForRange(arg.start, arg.end);
+    },
+    [loadSlotsForRange]
+  );
 
   useEffect(() => {
     setHoverTooltip(null);
@@ -293,9 +297,9 @@ export function InstaScheduleCal({
 
   const navigationValidRange = useMemo(() => {
     const now = new Date();
+    // Only constrain the past; omit `end` so users can navigate to any future month.
     const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const end = new Date(now.getFullYear(), now.getMonth() + 2, 1);
-    return { start, end };
+    return { start };
   }, []);
 
   const calendarEvents = useMemo(() => {
@@ -397,6 +401,7 @@ export function InstaScheduleCal({
           plugins={[dayGridPlugin, interactionPlugin]}
           initialView="dayGridMonth"
           validRange={navigationValidRange}
+          datesSet={handleDatesSet}
           headerToolbar={{
             left: "prev,next today",
             center: "title",

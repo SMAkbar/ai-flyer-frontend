@@ -6,19 +6,22 @@ import { ImageCategorySection } from "./ImageCategorySection";
 import { PostingOptionsCard } from "./PostingOptionsCard";
 import { CarouselPreview } from "./CarouselPreview";
 import { instagramApi, type InstagramCarouselPostRead } from "@/lib/api/instagram";
-import { flyersApi, type FlyerDetailRead } from "@/lib/api/flyers";
+import type { FlyerDetailRead } from "@/lib/api/flyers";
 import { tokens } from "@/components/theme/tokens";
 import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 import type { GeneratedImageType, FlyerGeneratedImage } from "@/lib/api/flyers";
 
 type InstagramSchedulingPageProps = {
   flyer: FlyerDetailRead;
-  onBack: () => void;
+  onClose: () => void;
+  embedded?: boolean;
 };
 
 export function InstagramSchedulingPage({
   flyer,
-  onBack,
+  onClose,
+  embedded = false,
 }: InstagramSchedulingPageProps) {
   const [selectedCombinedImageId, setSelectedCombinedImageId] = useState<number | null>(null);
 
@@ -45,11 +48,11 @@ export function InstagramSchedulingPage({
 
   const generatedImages = flyer.generated_images || [];
 
-  // Load carousel post on mount
+  // Load carousel post on mount / flyer change only (not on every parent refresh)
   useEffect(() => {
     loadCarouselPost();
-    generateDefaultCaption();
-  }, [flyer]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: flyer.id only
+  }, [flyer.id]);
 
   // Helper to format ISO date string to display format (e.g., "15 January 2025")
   function formatDateForCaption(isoDate: string | null | undefined): string | null {
@@ -130,6 +133,8 @@ export function InstagramSchedulingPage({
 
           if (post.caption) {
             setCaption(post.caption);
+          } else {
+            generateDefaultCaption();
           }
           if (post.hashtags) {
             setHashtags(post.hashtags);
@@ -139,6 +144,8 @@ export function InstagramSchedulingPage({
         // 404 is expected if no carousel post exists yet
         if (result.error.status !== 404) {
           setError(result.error.message || "Failed to load carousel post");
+        } else {
+          generateDefaultCaption();
         }
       }
     } catch (err) {
@@ -208,7 +215,6 @@ export function InstagramSchedulingPage({
         setSuccess(`Carousel post scheduled for: ${scheduledTime}`);
       }
 
-      // Reload to get updated status
       try {
         await loadCarouselPost();
       } catch (err) {
@@ -292,19 +298,22 @@ export function InstagramSchedulingPage({
   const readyToSchedule =
     Boolean(selectedCombinedImageId) && Boolean(flyer.cloudfront_url);
 
+  const HeadingTag = embedded ? "h2" : "h1";
+
   return (
     <div
       style={{
         display: "flex",
         flexDirection: "column",
         gap: "24px",
+        marginTop: embedded ? "24px" : undefined,
       }}
     >
       {/* Page Header */}
       <div>
-        <h1
+        <HeadingTag
           style={{
-            fontSize: "28px",
+            fontSize: embedded ? "20px" : "28px",
             fontWeight: 700,
             color: tokens.textPrimary,
             marginBottom: "8px",
@@ -312,10 +321,10 @@ export function InstagramSchedulingPage({
           }}
         >
           Schedule Instagram Carousel Post
-        </h1>
+        </HeadingTag>
         <p
           style={{
-            fontSize: "16px",
+            fontSize: embedded ? "14px" : "16px",
             color: tokens.textSecondary,
             margin: 0,
           }}
@@ -337,7 +346,8 @@ export function InstagramSchedulingPage({
         </Alert>
       )}
 
-      {/* Original Flyer Image Section (Read-only) */}
+      {/* Original Flyer Image Section (Read-only) — hidden when embedded (shown in left column) */}
+      {!embedded && (
       <Card style={{ padding: "24px" }}>
         <h3
           style={{
@@ -421,6 +431,7 @@ export function InstagramSchedulingPage({
           )}
         </div>
       </Card>
+      )}
 
       <ImageCategorySection
         categoryType="combined"
@@ -442,20 +453,20 @@ export function InstagramSchedulingPage({
 
       {readyToSchedule && !carouselPost && (
         <PostingOptionsCard
-          caption={caption}
-          hashtags={hashtags}
-          scheduledAt={scheduledAt}
-          postingMode={postingMode}
-          onCaptionChange={setCaption}
-          onHashtagsChange={setHashtags}
-          onScheduledAtChange={setScheduledAt}
-          onPostingModeChange={setPostingMode}
-          onSubmit={handleSubmit}
-          isSubmitting={isSubmitting}
-          disabled={isLoading}
-          categoryLabel="Carousel"
-          scheduleSelectionTitle={flyer.title}
-        />
+            caption={caption}
+            hashtags={hashtags}
+            scheduledAt={scheduledAt}
+            postingMode={postingMode}
+            onCaptionChange={setCaption}
+            onHashtagsChange={setHashtags}
+            onScheduledAtChange={setScheduledAt}
+            onPostingModeChange={setPostingMode}
+            onSubmit={handleSubmit}
+            isSubmitting={isSubmitting}
+            disabled={isLoading}
+            categoryLabel="Carousel"
+            scheduleSelectionTitle={flyer.title}
+          />
       )}
 
       {/* Carousel Post Status */}
@@ -611,6 +622,25 @@ export function InstagramSchedulingPage({
           </div>
         </div>
       )}
+
+      {/* Dismiss panel — hides UI only; does not cancel a scheduled post */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          marginTop: "8px",
+          paddingTop: "24px",
+          borderTop: `1px solid ${tokens.border}`,
+        }}
+      >
+        <Button
+          onClick={onClose}
+          variant="secondary"
+          disabled={isSubmitting || isCanceling || isRescheduling}
+        >
+          {isCarouselPosted ? "Close" : "Cancel"}
+        </Button>
+      </div>
     </div>
   );
 }

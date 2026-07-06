@@ -14,6 +14,7 @@ import { CubeIcon, CheckIcon, WarningIcon, ClockIcon, ImageIcon, SaveIcon, Loade
 export type ExtractionData = {
   status: 'completed' | 'processing' | 'failed' | 'pending';
   event_date?: string | null;
+  event_end_date?: string | null;
   location_town_city?: string | null;
   country?: string | null;
   event_title?: string | null;
@@ -27,6 +28,7 @@ export type ExtractionData = {
 // Type for edited field values
 export type EditedFields = {
   event_date?: string;
+  event_end_date?: string;
   location_town_city?: string;
   country?: string;
   event_title?: string;
@@ -230,23 +232,34 @@ function InlineDatePickerField({
   editedValue,
   onChange,
   disabled = false,
+  placeholder = "Select event date",
+  min,
+  clearable = false,
 }: {
   value: string | null | undefined;
   editedValue: string | undefined;
   onChange: (value: string | null) => void;
   disabled?: boolean;
+  placeholder?: string;
+  min?: string;
+  clearable?: boolean;
 }) {
   // Use edited value if available, otherwise use original value
   const currentValue = editedValue !== undefined ? editedValue : (value ?? null);
-  const isModified = editedValue !== undefined && editedValue !== (value ?? '');
+  const normalizedOriginal = value ?? null;
+  const normalizedCurrent = currentValue || null;
+  const isModified =
+    editedValue !== undefined && normalizedCurrent !== normalizedOriginal;
 
   return (
     <div style={{ position: 'relative' }}>
       <DatePicker
-        value={currentValue || null}
+        value={normalizedCurrent}
         onChange={(newValue) => onChange(newValue)}
         disabled={disabled}
-        placeholder="Select event date"
+        placeholder={placeholder}
+        min={min}
+        clearable={clearable}
         style={{
           borderColor: isModified ? tokens.accent : undefined,
           boxShadow: isModified ? `0 0 0 1px ${tokens.accent}40` : undefined,
@@ -257,7 +270,7 @@ function InlineDatePickerField({
           style={{
             position: 'absolute',
             top: '-6px',
-            right: '8px',
+            right: clearable && normalizedCurrent ? '40px' : '8px',
             fontSize: '10px',
             fontWeight: 600,
             color: tokens.accent,
@@ -413,6 +426,33 @@ export function ExtractionCard({
                   editedValue={editedFields.event_date}
                   onChange={(value) => onFieldChange('event_date', value || '')}
                   disabled={isUpdating}
+                />
+              </div>
+
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  <FieldLabel>End Date (optional)</FieldLabel>
+                  {(extraction.event_end_date || editedFields.event_end_date) && (
+                    <ConfidenceBadge
+                      status={getFieldConfidenceStatus(
+                        extraction.event_end_date,
+                        extraction.field_confidence_levels?.event_end_date
+                      )}
+                      confidence={extraction.field_confidence_levels?.event_end_date}
+                    />
+                  )}
+                </div>
+                <InlineDatePickerField
+                  value={extraction.event_end_date}
+                  editedValue={editedFields.event_end_date}
+                  onChange={(value) => onFieldChange('event_end_date', value || '')}
+                  disabled={
+                    isUpdating ||
+                    !(editedFields.event_date ?? extraction.event_date)
+                  }
+                  placeholder="Select end date for multi-day events"
+                  min={editedFields.event_date ?? extraction.event_date ?? undefined}
+                  clearable
                 />
               </div>
 

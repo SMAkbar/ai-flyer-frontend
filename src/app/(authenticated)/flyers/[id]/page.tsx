@@ -13,7 +13,8 @@ import { FlyerHeader } from "@/components/flyers/FlyerHeader";
 import { ExtractionCard, type EditedFields } from "@/components/flyers/ExtractionCard";
 import { GeneratedImagesSection } from "@/components/flyers/GeneratedImagesSection";
 import { WordPressPostingCard } from "@/components/flyers/WordPressPostingCard";
-import { filterAndSortFlyers, type FilterStatus, type SortOption } from "@/lib/utils/flyerFilters";
+import { InstagramSchedulingPage } from "@/components/flyers/InstagramSchedulingPage";
+import { DEFAULT_SORT_OPTION, filterAndSortFlyers, type FilterStatus, type SortOption } from "@/lib/utils/flyerFilters";
 
 type AdjacentFlyers = {
   prev: FlyerRead | null;
@@ -65,10 +66,10 @@ export default function FlyerDetailPage() {
   const searchParams = useSearchParams();
   const flyerId = params?.id ? parseInt(params.id as string, 10) : null;
 
-  // Read filter params from URL, defaulting to "all", "", "latest"
+  // Read filter params from URL, defaulting to "all", "", DEFAULT_SORT_OPTION
   const filterStatus = (searchParams.get("filter") as FilterStatus) || "all";
   const searchQuery = searchParams.get("search") || "";
-  const sortOption = (searchParams.get("sort") as SortOption) || "latest";
+  const sortOption = (searchParams.get("sort") as SortOption) || DEFAULT_SORT_OPTION;
 
   const [flyer, setFlyer] = useState<FlyerDetailRead | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -82,6 +83,7 @@ export default function FlyerDetailPage() {
   const [isStartingRetry, setIsStartingRetry] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
   const [showWordPressPosting, setShowWordPressPosting] = useState(false);
+  const [showInstagramScheduling, setShowInstagramScheduling] = useState(false);
   const [wordpressPost, setWordpressPost] = useState<WordPressPostRead | null>(null);
   const [adjacentFlyers, setAdjacentFlyers] = useState<AdjacentFlyers>({ prev: null, next: null });
 
@@ -92,8 +94,9 @@ export default function FlyerDetailPage() {
 
   useEffect(() => {
     if (flyerId) {
-      // Reset edited fields when changing flyers
+      // Reset edited fields and inline panels when changing flyers
       setEditedFields({});
+      setShowInstagramScheduling(false);
       loadFlyer();
       loadWordPressPost();
       loadAdjacentFlyers();
@@ -221,7 +224,14 @@ export default function FlyerDetailPage() {
     const extraction = flyer.information_extraction;
     
     return Object.entries(editedFields).some(([key, value]) => {
-      const originalValue = extraction[key as keyof typeof extraction] ?? '';
+      const fieldKey = key as keyof EditedFields;
+      const rawOriginal = extraction[fieldKey as keyof typeof extraction];
+      if (fieldKey === "event_end_date" || fieldKey === "event_date") {
+        const originalValue = rawOriginal ?? null;
+        const normalizedValue = value.trim() ? value.trim() : null;
+        return normalizedValue !== originalValue;
+      }
+      const originalValue = rawOriginal ?? '';
       return value !== originalValue;
     });
   }, [flyer, editedFields]);
@@ -236,9 +246,17 @@ export default function FlyerDetailPage() {
     
     for (const [key, value] of Object.entries(editedFields)) {
       const fieldKey = key as keyof EditedFields;
-      const originalValue = extraction[fieldKey as keyof typeof extraction] ?? '';
-      if (value !== originalValue) {
-        updateData[fieldKey] = value.trim() || null;
+      const rawOriginal = extraction[fieldKey as keyof typeof extraction];
+      const originalValue =
+        fieldKey === "event_end_date" || fieldKey === "event_date"
+          ? (rawOriginal ?? null)
+          : (rawOriginal ?? "");
+      const normalizedValue =
+        fieldKey === "event_end_date" || fieldKey === "event_date"
+          ? (value.trim() ? value.trim() : null)
+          : value;
+      if (normalizedValue !== originalValue) {
+        updateData[fieldKey] = normalizedValue;
       }
     }
 
@@ -266,6 +284,7 @@ export default function FlyerDetailPage() {
           };
         });
         setEditedFields({});
+        setShowInstagramScheduling(false);
       } else {
         setError(result.error.message || "Failed to save changes");
       }
@@ -290,12 +309,50 @@ export default function FlyerDetailPage() {
     if (searchQuery.trim()) {
       params.set("search", searchQuery);
     }
-    if (sortOption !== "latest") {
+    if (sortOption !== DEFAULT_SORT_OPTION) {
       params.set("sort", sortOption);
     }
     const queryString = params.toString();
     return queryString ? `/flyers/${flyerId}?${queryString}` : `/flyers/${flyerId}`;
   }, [filterStatus, searchQuery, sortOption]);
+
+  const navigateToAdjacentFlyer = useCallback(
+    (direction: "prev" | "next") => {
+      const target = adjacentFlyers[direction];
+      if (!target) return;
+      router.push(buildNavigationUrl(target.id));
+    },
+    [adjacentFlyers, buildNavigationUrl, router]
+  );
+
+  // Shift+< and Shift+> keyboard shortcuts for prev/next flyer navigation
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) return;
+
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          target.closest("input, textarea, select, [contenteditable='true']"))
+      ) {
+        return;
+      }
+
+      if (event.key === "<") {
+        if (!adjacentFlyers.prev) return;
+        event.preventDefault();
+        navigateToAdjacentFlyer("prev");
+      } else if (event.key === ">") {
+        if (!adjacentFlyers.next) return;
+        event.preventDefault();
+        navigateToAdjacentFlyer("next");
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [adjacentFlyers, navigateToAdjacentFlyer]);
 
   // Handler to navigate back to flyers page, preserving filter params
   const handleBackToFlyers = useCallback(() => {
@@ -306,7 +363,7 @@ export default function FlyerDetailPage() {
     if (searchQuery.trim()) {
       params.set("search", searchQuery);
     }
-    if (sortOption !== "latest") {
+    if (sortOption !== DEFAULT_SORT_OPTION) {
       params.set("sort", sortOption);
     }
     const queryString = params.toString();
@@ -317,6 +374,7 @@ export default function FlyerDetailPage() {
   const handleGenerateImages = async () => {
     if (!flyerId || !flyer?.information_extraction) return;
 
+    setShowInstagramScheduling(false);
     setIsStartingGeneration(true);
     setError(null);
 
@@ -421,7 +479,7 @@ export default function FlyerDetailPage() {
           }}>
             {adjacentFlyers.prev && (
               <button
-                onClick={() => router.push(buildNavigationUrl(adjacentFlyers.prev!.id))}
+                onClick={() => navigateToAdjacentFlyer("prev")}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -461,7 +519,7 @@ export default function FlyerDetailPage() {
             
             {adjacentFlyers.next && (
               <button
-                onClick={() => router.push(buildNavigationUrl(adjacentFlyers.next!.id))}
+                onClick={() => navigateToAdjacentFlyer("next")}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -579,10 +637,15 @@ export default function FlyerDetailPage() {
                 {flyer.generated_images && flyer.generated_images.length > 0 && (
                   <div style={{ marginTop: "24px", display: "flex", gap: "16px", flexWrap: "wrap" }}>
                     <Button
-                      onClick={() => router.push(`/flyers/${flyer.id}/instagram`)}
+                      onClick={() => setShowInstagramScheduling(true)}
                       variant="primary"
+                      disabled={isGeneratingImages}
                     >
-                      Schedule Instagram Posts
+                      {flyer.carousel_post_status === "posted"
+                        ? "Instagram Posted"
+                        : flyer.carousel_post_status === "scheduled"
+                        ? "Instagram Scheduled"
+                        : "Schedule Instagram Posts"}
                     </Button>
                     <Button
                       onClick={() => setShowWordPressPosting(true)}
@@ -595,6 +658,14 @@ export default function FlyerDetailPage() {
                         : "Post to WordPress"}
                     </Button>
                   </div>
+                )}
+
+                {showInstagramScheduling && (
+                  <InstagramSchedulingPage
+                    flyer={flyer}
+                    embedded
+                    onClose={() => setShowInstagramScheduling(false)}
+                  />
                 )}
                 
                 {/* WordPress Posting Modal/Card */}

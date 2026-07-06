@@ -2,7 +2,7 @@
 import React from 'react';
 import { FlyerCard } from './FlyerCard';
 import type { FlyerRead } from '@/lib/api/flyers';
-import type { FilterStatus, SortOption } from '@/lib/utils/flyerFilters';
+import { DEFAULT_SORT_OPTION, type FilterStatus, type SortOption } from '@/lib/utils/flyerFilters';
 
 export type FlyersGridProps = {
   flyers: FlyerRead[];
@@ -22,7 +22,7 @@ export function FlyersGrid({
   onUnarchive,
   filterStatus = "all",
   searchQuery = "",
-  sortOption = "latest",
+  sortOption = DEFAULT_SORT_OPTION,
   disableNavigation = false,
   hideDelete = false,
   showUnarchive = false,

@@ -13,7 +13,7 @@ type ImagePreview = {
 
 export type DuplicateFlyerPrompt = {
   flyer_hash: string;
-  existing_flyer: { id: number; title: string } | null;
+  existing_flyer: { id: number; title: string; is_archived: boolean } | null;
 };
 
 export type BulkDuplicateFlyerPrompt = Pick<
@@ -464,8 +464,9 @@ export function CreateFlyerForm({
                   <strong style={{ color: tokens.textPrimary }}>
                     {duplicatePrompt.existing_flyer.title}
                   </strong>{" "}
-                  (id {duplicatePrompt.existing_flyer.id}). Uploading again will create another flyer
-                  record.
+                  (id {duplicatePrompt.existing_flyer.id}
+                  {duplicatePrompt.existing_flyer.is_archived ? ", archived" : ""}). Uploading again
+                  will create another flyer record.
                 </>
               ) : bulkDuplicatePrompt ? (
                 <>
@@ -495,6 +496,7 @@ export function CreateFlyerForm({
                               </strong>
                               {" (id "}
                               {row.existing_flyer_id}
+                              {row.existing_flyer_is_archived ? ", archived" : ""}
                               {")"}
                             </li>
                           ))

@@ -72,6 +72,7 @@ export type ScheduledPostsStatusFilter =
 export type ScheduledPostSlot = {
   timeslot: string;
   flyer_name: string;
+  flyer_id: number;
 };
 
 export type ScheduledPostSlotsInRangeResponse = {

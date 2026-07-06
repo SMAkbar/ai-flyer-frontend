@@ -18,7 +18,7 @@ export type FlyerRead = {
 export type FlyerImageHashCheckResponse = {
   flyer_hash: string;
   is_duplicate: boolean;
-  existing_flyer: { id: number; title: string } | null;
+  existing_flyer: { id: number; title: string; is_archived: boolean } | null;
 };
 
 export type FlyerBulkHashCheckResponse = {
@@ -29,6 +29,7 @@ export type FlyerBulkHashCheckResponse = {
     existing_flyer_id: number;
     existing_flyer_title: string | null;
     existing_flyer_user_id: number | null;
+    existing_flyer_is_archived: boolean;
   }>;
   duplicates_in_request: Array<{
     flyer_hash: string;
@@ -43,6 +44,7 @@ export type FlyerInformationExtraction = {
   flyer_id: number;
   status: ExtractionStatus;
   event_date: string | null; // ISO date string (YYYY-MM-DD format)
+  event_end_date: string | null; // ISO date string (YYYY-MM-DD format), optional
   location_town_city: string | null;
   country: string | null; // Country name (e.g., "United Kingdom", "Germany")
   event_title: string | null;
@@ -56,7 +58,11 @@ export type FlyerInformationExtraction = {
   updated_at: string;
 };
 
-export type GeneratedImageType = "time_date" | "performers" | "location" | "combined";
+export type GeneratedImageType =
+  | "time_date"
+  | "performers"
+  | "location"
+  | "combined";
 
 export type ImageGenerationStatus = "requested" | "generating" | "generated" | "failed";
 
@@ -78,6 +84,7 @@ export type FlyerDetailRead = FlyerRead & {
 
 export type FlyerInformationExtractionUpdate = {
   event_date?: string | null; // ISO date string (YYYY-MM-DD format)
+  event_end_date?: string | null; // ISO date string (YYYY-MM-DD format)
   location_town_city?: string | null;
   country?: string | null; // Country name (e.g., "United Kingdom", "Germany")
   event_title?: string | null;
@@ -103,6 +110,8 @@ export type FlyerListStatusFilter =
   | "failed";
 export type FlyerListSort = "latest" | "oldest" | "latest_event" | "oldest_event";
 
+export const DEFAULT_FLYER_SORT: FlyerListSort = "oldest_event";
+
 export type FlyerListPageResponse = {
   items: FlyerRead[];
   total: number;
@@ -125,7 +134,7 @@ function flyersListPath(params: {
   if (params.status && params.status !== "all") {
     q.set("status", params.status);
   }
-  if (params.sort && params.sort !== "latest") {
+  if (params.sort && params.sort !== DEFAULT_FLYER_SORT) {
     q.set("sort", params.sort);
   }
   return `/flyers?${q.toString()}`;

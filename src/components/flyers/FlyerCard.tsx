@@ -13,7 +13,7 @@ import { flyersApi } from "@/lib/api/flyers";
 import { archivesApi } from "@/lib/api/archives";
 import type { FlyerRead, ExtractionStatus } from "@/lib/api/flyers";
 import type { PostStatus } from "@/lib/api/instagram";
-import type { FilterStatus, SortOption } from "@/lib/utils/flyerFilters";
+import { DEFAULT_SORT_OPTION, type FilterStatus, type SortOption } from "@/lib/utils/flyerFilters";
 
 type FlyerCardProps = {
   flyer: FlyerRead;
@@ -33,7 +33,7 @@ export function FlyerCard({
   onUnarchive,
   filterStatus = "all",
   searchQuery = "",
-  sortOption = "latest",
+  sortOption = DEFAULT_SORT_OPTION,
   disableNavigation = false,
   hideDelete = false,
   showUnarchive = false,
@@ -64,7 +64,7 @@ export function FlyerCard({
     if (searchQuery.trim()) {
       params.set("search", searchQuery);
     }
-    if (sortOption !== "latest") {
+    if (sortOption !== DEFAULT_SORT_OPTION) {
       params.set("sort", sortOption);
     }
     const queryString = params.toString();

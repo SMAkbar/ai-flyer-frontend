@@ -12,7 +12,7 @@ import { FlyersGrid } from "@/components/flyers/FlyersGrid";
 import { PlusIcon } from "@/components/icons";
 import { flyersApi, FLYERS_LIST_PAGE_SIZE, type FlyerRead } from "@/lib/api/flyers";
 import { tokens } from "@/components/theme/tokens";
-import { type FilterStatus, type SortOption } from "@/lib/utils/flyerFilters";
+import { DEFAULT_SORT_OPTION, type FilterStatus, type SortOption } from "@/lib/utils/flyerFilters";
 
 const POLLING_INTERVAL = 5000; // 5 seconds
 
@@ -34,7 +34,7 @@ function FlyersPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
-  const [sortOption, setSortOption] = useState<SortOption>("latest");
+  const [sortOption, setSortOption] = useState<SortOption>(DEFAULT_SORT_OPTION);
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const pageRef = useRef(1);
@@ -409,10 +409,10 @@ function FlyersPageContent() {
               e.target.style.boxShadow = "none";
             }}
           >
+            <option value="oldest_event">Oldest First - Event Date</option>
+            <option value="latest_event">Newest First - Event Date</option>
             <option value="latest">Newest First - Created Date</option>
             <option value="oldest">Oldest First - Created Date</option>
-            <option value="latest_event">Newest First - Event Date</option>
-            <option value="oldest_event">Oldest First - Event Date</option>
           </select>
         </div>
       </div>
