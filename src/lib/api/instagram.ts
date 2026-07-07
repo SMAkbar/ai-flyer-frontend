@@ -49,6 +49,10 @@ export type ScheduledPostWithFlyerRead = InstagramPostRead & {
   flyer_title: string;
   image_type: string;
   cloudfront_url: string | null;
+  post_type?: "feed" | "story" | "story_and_feed";
+  carousel_post_id?: number | null;
+  story_post_id?: number | null;
+  instagram_story_id?: string | null;
 };
 
 export type AllScheduledPostsResponse = {
@@ -73,6 +77,7 @@ export type ScheduledPostSlot = {
   timeslot: string;
   flyer_name: string;
   flyer_id: number;
+  post_type: "feed" | "story" | "story_and_feed";
 };
 
 export type ScheduledPostSlotsInRangeResponse = {
@@ -123,6 +128,37 @@ export type SelectCarouselResponse = {
   flyer_id: number;
   carousel_post: InstagramCarouselPostRead;
 };
+
+export type ScheduleStoryRequest = {
+  scheduled_at: string;
+};
+
+export type InstagramStoryPostRead = {
+  id: number;
+  flyer_id: number;
+  post_status: PostStatus;
+  instagram_story_id: string | null;
+  post_error: string | null;
+  processed_story_url: string | null;
+  scheduled_at: string | null;
+  posted_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ScheduleStoryAndFeedRequest = {
+  combined_image_id: number;
+  scheduled_at: string;
+  caption: string | null;
+  hashtags: string | null;
+};
+
+export type ScheduleStoryAndFeedResponse = {
+  story_post: InstagramStoryPostRead;
+  carousel_post: InstagramCarouselPostRead;
+};
+
+export type InstagramPostType = "story_and_feed" | "feed" | "story";
 
 export const instagramApi = {
   selectImages: (flyerId: number, data: SelectImagesRequest) =>
@@ -203,5 +239,26 @@ export const instagramApi = {
 
   rescheduleFailedCarousel: (flyerId: number) =>
     apiClient.del(`/flyers/${flyerId}/instagram/carousel/reschedule`),
+
+  scheduleStory: (flyerId: number, data: ScheduleStoryRequest) =>
+    apiClient.post<InstagramStoryPostRead>(
+      `/flyers/${flyerId}/instagram/schedule-story`,
+      data
+    ),
+
+  getStory: (flyerId: number) =>
+    apiClient.get<InstagramStoryPostRead>(`/flyers/${flyerId}/instagram/story`),
+
+  cancelStory: (flyerId: number) =>
+    apiClient.del(`/flyers/${flyerId}/instagram/story`),
+
+  rescheduleFailedStory: (flyerId: number) =>
+    apiClient.del(`/flyers/${flyerId}/instagram/story/reschedule`),
+
+  scheduleStoryAndFeed: (flyerId: number, data: ScheduleStoryAndFeedRequest) =>
+    apiClient.post<ScheduleStoryAndFeedResponse>(
+      `/flyers/${flyerId}/instagram/schedule-story-and-feed`,
+      data
+    ),
 };
 

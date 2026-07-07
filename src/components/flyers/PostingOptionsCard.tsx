@@ -26,6 +26,10 @@ type PostingOptionsCardProps = {
   categoryLabel?: string; // Optional label to show which category this is for
   /** Shown on the calendar for the user’s draft slot (e.g. flyer title). */
   scheduleSelectionTitle?: string;
+  /** Hide caption and hashtags (story-only mode). */
+  hideCaptionHashtags?: boolean;
+  submitNowLabel?: string;
+  submitScheduleLabel?: string;
 };
 
 export function PostingOptionsCard({
@@ -42,6 +46,9 @@ export function PostingOptionsCard({
   disabled = false,
   categoryLabel,
   scheduleSelectionTitle,
+  hideCaptionHashtags = false,
+  submitNowLabel,
+  submitScheduleLabel,
 }: PostingOptionsCardProps) {
   const handleModeChange = (mode: PostingMode) => {
     onPostingModeChange(mode);
@@ -80,6 +87,7 @@ export function PostingOptionsCard({
       </h2>
 
       {/* Caption */}
+      {!hideCaptionHashtags && (
       <div style={{ marginBottom: "20px" }}>
         <label
           style={{
@@ -115,8 +123,10 @@ export function PostingOptionsCard({
           {captionLength} / {maxCaptionLength} characters
         </div>
       </div>
+      )}
 
       {/* Hashtags */}
+      {!hideCaptionHashtags && (
       <div style={{ marginBottom: "20px" }}>
         <label
           style={{
@@ -137,6 +147,7 @@ export function PostingOptionsCard({
           disabled={disabled || isSubmitting}
         />
       </div>
+      )}
 
       {/* Posting Mode */}
       <div style={{ marginBottom: "20px" }}>
@@ -266,7 +277,11 @@ export function PostingOptionsCard({
       {/* Submit Button */}
       <Button
         onClick={onSubmit}
-        disabled={disabled || isSubmitting || captionLength > maxCaptionLength}
+        disabled={
+          disabled ||
+          isSubmitting ||
+          (!hideCaptionHashtags && captionLength > maxCaptionLength)
+        }
         style={{
           width: "100%",
         }}
@@ -274,8 +289,10 @@ export function PostingOptionsCard({
         {isSubmitting
           ? "Scheduling..."
           : postingMode === "now"
-          ? `Post ${categoryLabel ? categoryLabel : ""} Now`.trim()
-          : `Schedule ${categoryLabel ? categoryLabel : ""} Post`.trim()}
+          ? (submitNowLabel ??
+            `Post ${categoryLabel ? categoryLabel : ""} Now`.trim())
+          : (submitScheduleLabel ??
+            `Schedule ${categoryLabel ? categoryLabel : ""} Post`.trim())}
       </Button>
     </Card>
   );

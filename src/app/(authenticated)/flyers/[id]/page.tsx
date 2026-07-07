@@ -6,15 +6,16 @@ import { PageLayout } from "@/components/ui/PageLayout";
 import { Container } from "@/components/ui/Container";
 import { BackButton } from "@/components/ui/BackButton";
 import { Button } from "@/components/ui/Button";
-import { flyersApi, type FlyerDetailRead, type FlyerRead, type FlyerInformationExtractionUpdate } from "@/lib/api/flyers";
+import { flyersApi, type FlyerDetailRead, type FlyerRead, type FlyerInformationExtractionUpdate, type FlyerUpdate } from "@/lib/api/flyers";
 import { wordpressApi, type WordPressPostRead } from "@/lib/api/wordpress";
 import { FlyerImageCard } from "@/components/flyers/FlyerImageCard";
 import { FlyerHeader } from "@/components/flyers/FlyerHeader";
+import { FlyerEventDetailsCard } from "@/components/flyers/FlyerEventDetailsCard";
 import { ExtractionCard, type EditedFields } from "@/components/flyers/ExtractionCard";
 import { GeneratedImagesSection } from "@/components/flyers/GeneratedImagesSection";
 import { WordPressPostingCard } from "@/components/flyers/WordPressPostingCard";
 import { InstagramSchedulingPage } from "@/components/flyers/InstagramSchedulingPage";
-import { DEFAULT_SORT_OPTION, filterAndSortFlyers, type FilterStatus, type SortOption } from "@/lib/utils/flyerFilters";
+import { DEFAULT_SORT_OPTION, filterAndSortFlyers, flyersListPath, parseFilterStatus, parseSortOption, type FilterStatus, type SortOption } from "@/lib/utils/flyerFilters";
 
 type AdjacentFlyers = {
   prev: FlyerRead | null;
@@ -45,6 +46,22 @@ function hasInFlightExtraction(flyer: FlyerDetailRead | null): boolean {
   return status === "pending" || status === "processing";
 }
 
+function instagramScheduleButtonLabel(flyer: FlyerDetailRead): string {
+  const carousel = flyer.carousel_post_status;
+  const story = flyer.story_post_status;
+
+  if (carousel === "posted" && story === "posted") {
+    return "Instagram Posted";
+  }
+  if (carousel === "posted" || story === "posted") {
+    return "Instagram Partially Posted";
+  }
+  if (carousel === "scheduled" || story === "scheduled") {
+    return "Instagram Scheduled";
+  }
+  return "Schedule Instagram Posts";
+}
+
 async function refreshUntilImageGenerationInFlight(
   flyerId: number,
   setFlyerData: (data: FlyerDetailRead) => void
@@ -66,16 +83,17 @@ export default function FlyerDetailPage() {
   const searchParams = useSearchParams();
   const flyerId = params?.id ? parseInt(params.id as string, 10) : null;
 
-  // Read filter params from URL, defaulting to "all", "", DEFAULT_SORT_OPTION
-  const filterStatus = (searchParams.get("filter") as FilterStatus) || "all";
+  // Read list context from URL so back navigation restores filters/sort.
+  const filterStatus = parseFilterStatus(searchParams.get("filter"));
   const searchQuery = searchParams.get("search") || "";
-  const sortOption = (searchParams.get("sort") as SortOption) || DEFAULT_SORT_OPTION;
+  const sortOption = parseSortOption(searchParams.get("sort"));
 
   const [flyer, setFlyer] = useState<FlyerDetailRead | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editedFields, setEditedFields] = useState<EditedFields>({});
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isSavingEventDetails, setIsSavingEventDetails] = useState(false);
   // Transient flags for the brief window between clicking an action and the
   // server responding. After that, "in-flight" state is derived from the
   // flyer payload itself so the UI stays correct across page reloads.
@@ -300,6 +318,31 @@ export default function FlyerDetailPage() {
     setEditedFields({});
   }, []);
 
+  const handleSaveEventDetails = useCallback(
+    async (updateData: FlyerUpdate): Promise<boolean> => {
+      if (!flyerId) return false;
+
+      setIsSavingEventDetails(true);
+      setError(null);
+
+      try {
+        const result = await flyersApi.update(flyerId, updateData);
+        if (result.ok) {
+          setFlyer(result.data);
+          return true;
+        }
+        setError(result.error.message || "Failed to save event details");
+        return false;
+      } catch {
+        setError("An unexpected error occurred while saving event details");
+        return false;
+      } finally {
+        setIsSavingEventDetails(false);
+      }
+    },
+    [flyerId]
+  );
+
   // Helper function to build navigation URL with query params
   const buildNavigationUrl = useCallback((flyerId: number) => {
     const params = new URLSearchParams();
@@ -356,19 +399,13 @@ export default function FlyerDetailPage() {
 
   // Handler to navigate back to flyers page, preserving filter params
   const handleBackToFlyers = useCallback(() => {
-    const params = new URLSearchParams();
-    if (filterStatus !== "all") {
-      params.set("filter", filterStatus);
-    }
-    if (searchQuery.trim()) {
-      params.set("search", searchQuery);
-    }
-    if (sortOption !== DEFAULT_SORT_OPTION) {
-      params.set("sort", sortOption);
-    }
-    const queryString = params.toString();
-    const url = queryString ? `/flyers?${queryString}` : `/flyers`;
-    router.push(url);
+    router.push(
+      flyersListPath({
+        filter: filterStatus,
+        search: searchQuery,
+        sort: sortOption,
+      })
+    );
   }, [router, filterStatus, searchQuery, sortOption]);
 
   const handleGenerateImages = async () => {
@@ -623,6 +660,13 @@ export default function FlyerDetailPage() {
                     flyer.generated_images.length > 0
                   }
                 />
+
+                <FlyerEventDetailsCard
+                  eventCategory={flyer.event_category ?? null}
+                  eventTicketLink={flyer.event_ticket_link ?? null}
+                  isSaving={isSavingEventDetails}
+                  onSave={handleSaveEventDetails}
+                />
               </div>
             </div>
 
@@ -641,11 +685,7 @@ export default function FlyerDetailPage() {
                       variant="primary"
                       disabled={isGeneratingImages}
                     >
-                      {flyer.carousel_post_status === "posted"
-                        ? "Instagram Posted"
-                        : flyer.carousel_post_status === "scheduled"
-                        ? "Instagram Scheduled"
-                        : "Schedule Instagram Posts"}
+                      {instagramScheduleButtonLabel(flyer)}
                     </Button>
                     <Button
                       onClick={() => setShowWordPressPosting(true)}

@@ -5,7 +5,13 @@ import { Alert } from "@/components/ui/Alert";
 import { ImageCategorySection } from "./ImageCategorySection";
 import { PostingOptionsCard } from "./PostingOptionsCard";
 import { CarouselPreview } from "./CarouselPreview";
-import { instagramApi, type InstagramCarouselPostRead } from "@/lib/api/instagram";
+import { StoryPreview } from "./StoryPreview";
+import {
+  instagramApi,
+  type InstagramCarouselPostRead,
+  type InstagramStoryPostRead,
+  type InstagramPostType,
+} from "@/lib/api/instagram";
 import type { FlyerDetailRead } from "@/lib/api/flyers";
 import { tokens } from "@/components/theme/tokens";
 import { Card } from "@/components/ui/Card";
@@ -18,47 +24,80 @@ type InstagramSchedulingPageProps = {
   embedded?: boolean;
 };
 
+const POST_TYPE_OPTIONS: { value: InstagramPostType; label: string }[] = [
+  { value: "story_and_feed", label: "Story + Feed" },
+  { value: "feed", label: "Feed" },
+  { value: "story", label: "Story" },
+];
+
+function inferPostType(
+  carousel: InstagramCarouselPostRead | null,
+  story: InstagramStoryPostRead | null
+): InstagramPostType {
+  if (carousel && story) {
+    return "story_and_feed";
+  }
+  if (story) {
+    return "story";
+  }
+  return "feed";
+}
+
+function postTypeDescription(postType: InstagramPostType): string {
+  switch (postType) {
+    case "story_and_feed":
+      return "Post a story with the original flyer and a carousel feed with your combined image.";
+    case "feed":
+      return "Choose a combined promotional image for the first slide; the original flyer is the second slide.";
+    case "story":
+      return "Post the original flyer as an Instagram story with a centered card layout.";
+  }
+}
+
+function postTypeHeading(postType: InstagramPostType): string {
+  switch (postType) {
+    case "story_and_feed":
+      return "Schedule Instagram Story + Feed";
+    case "feed":
+      return "Schedule Instagram Feed Post";
+    case "story":
+      return "Schedule Instagram Story";
+  }
+}
+
 export function InstagramSchedulingPage({
   flyer,
   onClose,
   embedded = false,
 }: InstagramSchedulingPageProps) {
+  const [postType, setPostType] = useState<InstagramPostType>("feed");
   const [selectedCombinedImageId, setSelectedCombinedImageId] = useState<number | null>(null);
-
-  // State for posting options (shared caption and hashtags for carousel)
   const [caption, setCaption] = useState("");
   const [hashtags, setHashtags] = useState("");
-
-  // Single posting mode for carousel (not per-image)
   const [postingMode, setPostingMode] = useState<"now" | "schedule">("now");
-  const [scheduledAt, setScheduledAt] = useState<string>(
-    new Date().toISOString()
-  );
-
-  // State for carousel post
+  const [scheduledAt, setScheduledAt] = useState<string>(new Date().toISOString());
   const [carouselPost, setCarouselPost] = useState<InstagramCarouselPostRead | null>(null);
-
-  // UI state
+  const [storyPost, setStoryPost] = useState<InstagramStoryPostRead | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isCanceling, setIsCanceling] = useState(false);
-  const [isRescheduling, setIsRescheduling] = useState(false);
+  const [isCancelingCarousel, setIsCancelingCarousel] = useState(false);
+  const [isCancelingStory, setIsCancelingStory] = useState(false);
+  const [isReschedulingCarousel, setIsReschedulingCarousel] = useState(false);
+  const [isReschedulingStory, setIsReschedulingStory] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   const generatedImages = flyer.generated_images || [];
 
-  // Load carousel post on mount / flyer change only (not on every parent refresh)
   useEffect(() => {
-    loadCarouselPost();
+    void loadInstagramPosts();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: flyer.id only
   }, [flyer.id]);
 
-  // Helper to format ISO date string to display format (e.g., "15 January 2025")
   function formatDateForCaption(isoDate: string | null | undefined): string | null {
     if (!isoDate) return null;
     try {
-      const date = new Date(isoDate + "T00:00:00");  // Parse as local date
+      const date = new Date(isoDate + "T00:00:00");
       return date.toLocaleDateString("en-GB", {
         day: "numeric",
         month: "long",
@@ -69,7 +108,6 @@ export function InstagramSchedulingPage({
     }
   }
 
-  // Auto-generate caption from extraction data
   function generateDefaultCaption() {
     const parts: string[] = [];
 
@@ -92,7 +130,7 @@ export function InstagramSchedulingPage({
       if (extraction.venue_name) {
         parts.push(`🏢 ${extraction.venue_name}`);
       }
-      
+
       if (extraction.country) {
         parts.push(`🌍 ${extraction.country}`);
       }
@@ -102,55 +140,65 @@ export function InstagramSchedulingPage({
       }
     }
 
-    // Always add collaboration credit at the end
     parts.push("Proudly promoting dub events in collaboration with @dubcentralsoundsystem 🤝🔊");
-
-    // Add website url at the end
     parts.push("Website link in bio 🔗");
 
     setCaption(parts.join("\n\n"));
   }
 
-  async function loadCarouselPost() {
+  async function loadInstagramPosts() {
     setIsLoading(true);
     setError(null);
 
     try {
-      const result = await instagramApi.getCarousel(flyer.id);
+      const [carouselResult, storyResult] = await Promise.all([
+        instagramApi.getCarousel(flyer.id),
+        instagramApi.getStory(flyer.id),
+      ]);
 
-      if (result.ok) {
-        const post = result.data;
-        setCarouselPost(post);
+      let loadedCarousel: InstagramCarouselPostRead | null = null;
+      let loadedStory: InstagramStoryPostRead | null = null;
 
-        // Restore selected images from carousel post
-        if (post.post_status !== "posted") {
-          setSelectedCombinedImageId(post.combined_image_id ?? null);
+      if (carouselResult.ok) {
+        loadedCarousel = carouselResult.data;
+        setCarouselPost(loadedCarousel);
 
-          if (post.scheduled_at) {
-            setScheduledAt(post.scheduled_at);
+        if (loadedCarousel.post_status !== "posted") {
+          setSelectedCombinedImageId(loadedCarousel.combined_image_id ?? null);
+          if (loadedCarousel.scheduled_at) {
+            setScheduledAt(loadedCarousel.scheduled_at);
             setPostingMode("schedule");
           }
-
-          if (post.caption) {
-            setCaption(post.caption);
+          if (loadedCarousel.caption) {
+            setCaption(loadedCarousel.caption);
           } else {
             generateDefaultCaption();
           }
-          if (post.hashtags) {
-            setHashtags(post.hashtags);
+          if (loadedCarousel.hashtags) {
+            setHashtags(loadedCarousel.hashtags);
           }
         }
+      } else if (carouselResult.error.status !== 404) {
+        setError(carouselResult.error.message || "Failed to load carousel post");
       } else {
-        // 404 is expected if no carousel post exists yet
-        if (result.error.status !== 404) {
-          setError(result.error.message || "Failed to load carousel post");
-        } else {
-          generateDefaultCaption();
-        }
+        generateDefaultCaption();
       }
+
+      if (storyResult.ok) {
+        loadedStory = storyResult.data;
+        setStoryPost(loadedStory);
+
+        if (loadedStory.post_status !== "posted" && loadedStory.scheduled_at) {
+          setScheduledAt(loadedStory.scheduled_at);
+          setPostingMode("schedule");
+        }
+      } else if (storyResult.error.status !== 404) {
+        setError(storyResult.error.message || "Failed to load story post");
+      }
+
+      setPostType(inferPostType(loadedCarousel, loadedStory));
     } catch (err) {
-      console.error("Error loading carousel post:", err);
-      // Don't show error for 404 (no carousel post yet)
+      console.error("Error loading Instagram posts:", err);
       if (err instanceof Error && !err.message.includes("404")) {
         setError(err.message || "An unexpected error occurred");
       }
@@ -164,17 +212,17 @@ export function InstagramSchedulingPage({
   }
 
   async function handleSubmit() {
-    if (!selectedCombinedImageId) {
-      setError("Please select a combined promotional image for the first carousel slide");
-      return;
-    }
     if (!flyer.cloudfront_url) {
-      setError("This flyer has no image URL; cannot build the carousel");
+      setError("This flyer has no image URL");
       return;
     }
 
-    // Validate caption length
-    if (caption.length > 2200) {
+    if (postType !== "story" && !selectedCombinedImageId) {
+      setError("Please select a combined promotional image for the feed carousel");
+      return;
+    }
+
+    if (postType !== "story" && caption.length > 2200) {
       setError("Caption must be 2,200 characters or less");
       return;
     }
@@ -183,43 +231,73 @@ export function InstagramSchedulingPage({
     setError(null);
     setSuccess(null);
 
-    try {
-      const scheduledDateTime = postingMode === "now" 
-        ? new Date(Date.now() - 60000).toISOString() // 1 minute ago
+    const scheduledDateTime =
+      postingMode === "now"
+        ? new Date(Date.now() - 60000).toISOString()
         : scheduledAt;
 
-      const result = await instagramApi.scheduleCarousel(flyer.id, {
-        combined_image_id: selectedCombinedImageId,
-        // Legacy fields kept in the payload (sent as null) so the previous
-        // 3-image workflow can be restored without an API change. The UI for
-        // selecting these images is hidden today.
-        time_date_image_id: null,
-        performers_image_id: null,
-        location_image_id: null,
-        scheduled_at: scheduledDateTime,
-        caption: caption || null,
-        hashtags: hashtags || null,
-      });
+    try {
+      if (postType === "feed") {
+        const result = await instagramApi.scheduleCarousel(flyer.id, {
+          combined_image_id: selectedCombinedImageId!,
+          time_date_image_id: null,
+          performers_image_id: null,
+          location_image_id: null,
+          scheduled_at: scheduledDateTime,
+          caption: caption || null,
+          hashtags: hashtags || null,
+        });
 
-      if (!result.ok) {
-        setError(result.error.message || "Failed to schedule carousel post");
-        return;
-      }
+        if (!result.ok) {
+          setError(result.error.message || "Failed to schedule carousel post");
+          return;
+        }
 
-      setCarouselPost(result.data);
+        setCarouselPost(result.data);
+        setSuccess(
+          postingMode === "now"
+            ? "Carousel post is being published now!"
+            : `Carousel post scheduled for: ${new Date(scheduledDateTime).toLocaleString()}`
+        );
+      } else if (postType === "story") {
+        const result = await instagramApi.scheduleStory(flyer.id, {
+          scheduled_at: scheduledDateTime,
+        });
 
-      if (postingMode === "now") {
-        setSuccess("Carousel post is being published now!");
+        if (!result.ok) {
+          setError(result.error.message || "Failed to schedule story post");
+          return;
+        }
+
+        setStoryPost(result.data);
+        setSuccess(
+          postingMode === "now"
+            ? "Story is being published now!"
+            : `Story scheduled for: ${new Date(scheduledDateTime).toLocaleString()}`
+        );
       } else {
-        const scheduledTime = new Date(scheduledDateTime).toLocaleString();
-        setSuccess(`Carousel post scheduled for: ${scheduledTime}`);
+        const result = await instagramApi.scheduleStoryAndFeed(flyer.id, {
+          combined_image_id: selectedCombinedImageId!,
+          scheduled_at: scheduledDateTime,
+          caption: caption || null,
+          hashtags: hashtags || null,
+        });
+
+        if (!result.ok) {
+          setError(result.error.message || "Failed to schedule story and feed");
+          return;
+        }
+
+        setStoryPost(result.data.story_post);
+        setCarouselPost(result.data.carousel_post);
+        setSuccess(
+          postingMode === "now"
+            ? "Story and feed are being published now!"
+            : `Story and feed scheduled for: ${new Date(scheduledDateTime).toLocaleString()}`
+        );
       }
 
-      try {
-        await loadCarouselPost();
-      } catch (err) {
-        console.error("Error reloading carousel post:", err);
-      }
+      await loadInstagramPosts();
     } catch (err) {
       console.error("Error in handleSubmit:", err);
       setError(err instanceof Error ? err.message : "An unexpected error occurred");
@@ -229,52 +307,90 @@ export function InstagramSchedulingPage({
   }
 
   async function handleCancelCarousel() {
-    setIsCanceling(true);
+    setIsCancelingCarousel(true);
     setError(null);
 
     try {
       const result = await instagramApi.cancelCarousel(flyer.id);
-
       if (result.ok) {
-        setSuccess("Carousel post canceled successfully");
+        setSuccess("Feed post canceled successfully");
         setCarouselPost(null);
-        // Reset selections
         setSelectedCombinedImageId(null);
-        setPostingMode("now");
+        if (!storyPost) {
+          setPostingMode("now");
+        }
       } else {
         setError(result.error.message || "Failed to cancel carousel post");
       }
     } catch (err) {
-      console.error("Error canceling carousel:", err);
       setError(err instanceof Error ? err.message : "An unexpected error occurred");
     } finally {
-      setIsCanceling(false);
+      setIsCancelingCarousel(false);
+    }
+  }
+
+  async function handleCancelStory() {
+    setIsCancelingStory(true);
+    setError(null);
+
+    try {
+      const result = await instagramApi.cancelStory(flyer.id);
+      if (result.ok) {
+        setSuccess("Story canceled successfully");
+        setStoryPost(null);
+        if (!carouselPost) {
+          setPostingMode("now");
+        }
+      } else {
+        setError(result.error.message || "Failed to cancel story post");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An unexpected error occurred");
+    } finally {
+      setIsCancelingStory(false);
     }
   }
 
   async function handleRescheduleFailedCarousel() {
-    setIsRescheduling(true);
+    setIsReschedulingCarousel(true);
     setError(null);
     setSuccess(null);
 
     try {
       const result = await instagramApi.rescheduleFailedCarousel(flyer.id);
-
       if (result.ok) {
         setCarouselPost(null);
         setSelectedCombinedImageId(null);
         setHashtags("");
-        setPostingMode("now");
         generateDefaultCaption();
-        setSuccess("Failed carousel reset. Please select images and schedule again.");
+        setSuccess("Failed feed post reset. Please schedule again.");
       } else {
         setError(result.error.message || "Failed to reset failed carousel post");
       }
     } catch (err) {
-      console.error("Error resetting failed carousel:", err);
       setError(err instanceof Error ? err.message : "An unexpected error occurred");
     } finally {
-      setIsRescheduling(false);
+      setIsReschedulingCarousel(false);
+    }
+  }
+
+  async function handleRescheduleFailedStory() {
+    setIsReschedulingStory(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const result = await instagramApi.rescheduleFailedStory(flyer.id);
+      if (result.ok) {
+        setStoryPost(null);
+        setSuccess("Failed story reset. Please schedule again.");
+      } else {
+        setError(result.error.message || "Failed to reset failed story post");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An unexpected error occurred");
+    } finally {
+      setIsReschedulingStory(false);
     }
   }
 
@@ -293,12 +409,36 @@ export function InstagramSchedulingPage({
       }
     : null;
 
-  const isCarouselPosted = carouselPost?.post_status === "posted";
-
-  const readyToSchedule =
+  const showFeedSections = postType === "feed" || postType === "story_and_feed";
+  const showStorySections = postType === "story" || postType === "story_and_feed";
+  const readyForFeed =
     Boolean(selectedCombinedImageId) && Boolean(flyer.cloudfront_url);
+  const readyForStory = Boolean(flyer.cloudfront_url);
+  const isCarouselPosted = carouselPost?.post_status === "posted";
+  const isStoryPosted = storyPost?.post_status === "posted";
+
+  const showPostingForm =
+    (postType === "feed" && readyForFeed && !carouselPost) ||
+    (postType === "story" && readyForStory && !storyPost) ||
+    (postType === "story_and_feed" &&
+      readyForFeed &&
+      !carouselPost &&
+      !storyPost);
+
+  const allPosted =
+    postType === "story_and_feed"
+      ? isCarouselPosted && isStoryPosted
+      : postType === "story"
+      ? isStoryPosted
+      : isCarouselPosted;
 
   const HeadingTag = embedded ? "h2" : "h1";
+  const isBusy =
+    isSubmitting ||
+    isCancelingCarousel ||
+    isCancelingStory ||
+    isReschedulingCarousel ||
+    isReschedulingStory;
 
   return (
     <div
@@ -309,7 +449,6 @@ export function InstagramSchedulingPage({
         marginTop: embedded ? "24px" : undefined,
       }}
     >
-      {/* Page Header */}
       <div>
         <HeadingTag
           style={{
@@ -320,7 +459,7 @@ export function InstagramSchedulingPage({
             letterSpacing: "-0.02em",
           }}
         >
-          Schedule Instagram Carousel Post
+          {postTypeHeading(postType)}
         </HeadingTag>
         <p
           style={{
@@ -329,11 +468,56 @@ export function InstagramSchedulingPage({
             margin: 0,
           }}
         >
-          Choose a combined promotional image for the first slide; the original flyer is the second slide.
+          {postTypeDescription(postType)}
         </p>
       </div>
 
-      {/* Alerts */}
+      <Card style={{ padding: "20px 24px" }}>
+        <label
+          style={{
+            display: "block",
+            fontSize: "14px",
+            fontWeight: 600,
+            color: tokens.textPrimary,
+            marginBottom: "12px",
+          }}
+        >
+          Post type
+        </label>
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "20px",
+          }}
+        >
+          {POST_TYPE_OPTIONS.map((option) => (
+            <label
+              key={option.value}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                cursor: isBusy || isLoading ? "not-allowed" : "pointer",
+                opacity: isBusy || isLoading ? 0.6 : 1,
+              }}
+            >
+              <input
+                type="radio"
+                name="instagramPostType"
+                value={option.value}
+                checked={postType === option.value}
+                onChange={() => setPostType(option.value)}
+                disabled={isBusy || isLoading}
+              />
+              <span style={{ fontSize: "15px", color: tokens.textPrimary }}>
+                {option.label}
+              </span>
+            </label>
+          ))}
+        </div>
+      </Card>
+
       {error && (
         <Alert variant="error" style={{ marginBottom: "0" }}>
           {error}
@@ -346,284 +530,143 @@ export function InstagramSchedulingPage({
         </Alert>
       )}
 
-      {/* Original Flyer Image Section (Read-only) — hidden when embedded (shown in left column) */}
-      {!embedded && (
-      <Card style={{ padding: "24px" }}>
-        <h3
-          style={{
-            fontSize: "18px",
-            fontWeight: 600,
-            color: tokens.textPrimary,
-            marginBottom: "16px",
-          }}
-        >
-          Original Flyer
-        </h3>
-        <p
-          style={{
-            fontSize: "14px",
-            color: tokens.textSecondary,
-            marginBottom: "16px",
-          }}
-        >
-          This image is always the second slide in your carousel
-        </p>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "flex-start",
-          }}
-        >
+      {!embedded && showFeedSections && (
+        <Card style={{ padding: "24px" }}>
+          <h3
+            style={{
+              fontSize: "18px",
+              fontWeight: 600,
+              color: tokens.textPrimary,
+              marginBottom: "16px",
+            }}
+          >
+            Original Flyer
+          </h3>
+          <p
+            style={{
+              fontSize: "14px",
+              color: tokens.textSecondary,
+              marginBottom: "16px",
+            }}
+          >
+            {postType === "story_and_feed"
+              ? "Used as the story content and the second carousel slide"
+              : "This image is always the second slide in your carousel"}
+          </p>
           {flyer.cloudfront_url ? (
-            <div
+            <img
+              src={flyer.cloudfront_url}
+              alt="Original Flyer"
               style={{
-                position: "relative",
                 width: "200px",
                 aspectRatio: "1",
+                objectFit: "contain",
                 borderRadius: "12px",
-                overflow: "hidden",
                 border: `3px solid ${tokens.accent}`,
-                boxShadow: `0 0 0 3px ${tokens.accent}40`,
                 backgroundColor: "#000",
               }}
-            >
-              <img
-                src={flyer.cloudfront_url}
-                alt="Original Flyer"
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "contain",
-                }}
-              />
-              <div
-                style={{
-                  position: "absolute",
-                  top: "8px",
-                  right: "8px",
-                  backgroundColor: tokens.accent,
-                  color: "white",
-                  fontSize: "11px",
-                  fontWeight: 600,
-                  padding: "4px 8px",
-                  borderRadius: "4px",
-                }}
-              >
-                Selected
-              </div>
-            </div>
+            />
           ) : (
-            <div
-              style={{
-                width: "200px",
-                aspectRatio: "1",
-                borderRadius: "12px",
-                backgroundColor: tokens.bgHover,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: tokens.textSecondary,
-                fontSize: "14px",
-              }}
-            >
-              No image available
-            </div>
+            <div style={{ color: tokens.textSecondary }}>No image available</div>
           )}
-        </div>
-      </Card>
+        </Card>
       )}
 
-      <ImageCategorySection
-        categoryType="combined"
-        categoryLabel="Combined"
-        images={generatedImages}
-        selectedImageId={selectedCombinedImageId}
-        onSelectImage={handleSelectCombined}
-        disabled={isSubmitting || isCarouselPosted}
-        postedImageIds={new Set()}
-        isPosted={false}
-      />
+      {showFeedSections && (
+        <ImageCategorySection
+          categoryType="combined"
+          categoryLabel="Combined"
+          images={generatedImages}
+          selectedImageId={selectedCombinedImageId}
+          onSelectImage={handleSelectCombined}
+          disabled={isSubmitting || isCarouselPosted}
+          postedImageIds={new Set()}
+          isPosted={false}
+        />
+      )}
 
-      {readyToSchedule && (
+      {showFeedSections && readyForFeed && (
         <CarouselPreview
           combinedImage={selectedCombinedImage}
           originalFlyerImage={originalFlyerImage}
         />
       )}
 
-      {readyToSchedule && !carouselPost && (
+      {showStorySections && readyForStory && flyer.cloudfront_url && (
+        <StoryPreview flyerUrl={flyer.cloudfront_url} />
+      )}
+
+      {showPostingForm && (
         <PostingOptionsCard
-            caption={caption}
-            hashtags={hashtags}
-            scheduledAt={scheduledAt}
-            postingMode={postingMode}
-            onCaptionChange={setCaption}
-            onHashtagsChange={setHashtags}
-            onScheduledAtChange={setScheduledAt}
-            onPostingModeChange={setPostingMode}
-            onSubmit={handleSubmit}
-            isSubmitting={isSubmitting}
-            disabled={isLoading}
-            categoryLabel="Carousel"
-            scheduleSelectionTitle={flyer.title}
-          />
+          caption={caption}
+          hashtags={hashtags}
+          scheduledAt={scheduledAt}
+          postingMode={postingMode}
+          onCaptionChange={setCaption}
+          onHashtagsChange={setHashtags}
+          onScheduledAtChange={setScheduledAt}
+          onPostingModeChange={setPostingMode}
+          onSubmit={handleSubmit}
+          isSubmitting={isSubmitting}
+          disabled={isLoading}
+          categoryLabel={
+            postType === "story_and_feed"
+              ? "Story + Feed"
+              : postType === "story"
+              ? "Story"
+              : "Feed"
+          }
+          scheduleSelectionTitle={flyer.title}
+          hideCaptionHashtags={postType === "story"}
+          submitNowLabel={
+            postType === "story_and_feed"
+              ? "Post Story + Feed Now"
+              : postType === "story"
+              ? "Post Story Now"
+              : undefined
+          }
+          submitScheduleLabel={
+            postType === "story_and_feed"
+              ? "Schedule Story + Feed"
+              : postType === "story"
+              ? "Schedule Story"
+              : undefined
+          }
+        />
       )}
 
-      {/* Carousel Post Status */}
-      {carouselPost && (
-        <div
-          style={{
-            backgroundColor: tokens.bgElevated,
-            border: `1px solid ${tokens.border}`,
-            borderRadius: "16px",
-            padding: "24px",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: "16px",
-            }}
-          >
-            <h3
-              style={{
-                fontSize: "18px",
-                fontWeight: 600,
-                color: tokens.textPrimary,
-                margin: 0,
-              }}
-            >
-              Carousel Post Status
-            </h3>
-            {carouselPost.post_status === "failed" && (
-              <button
-                onClick={handleRescheduleFailedCarousel}
-                disabled={isRescheduling}
-                style={{
-                  padding: "8px 16px",
-                  backgroundColor: tokens.accent,
-                  color: "white",
-                  border: "none",
-                  borderRadius: "8px",
-                  cursor: isRescheduling ? "not-allowed" : "pointer",
-                  fontSize: "14px",
-                  fontWeight: 500,
-                }}
-              >
-                {isRescheduling ? "Rescheduling..." : "Reschedule instagram post"}
-              </button>
-            )}
-            {carouselPost.post_status === "scheduled" && !isCanceling && (
-              <button
-                onClick={handleCancelCarousel}
-                disabled={isCanceling}
-                style={{
-                  padding: "8px 16px",
-                  backgroundColor: tokens.danger,
-                  color: "white",
-                  border: "none",
-                  borderRadius: "8px",
-                  cursor: isCanceling ? "not-allowed" : "pointer",
-                  fontSize: "14px",
-                  fontWeight: 500,
-                }}
-              >
-                Cancel
-              </button>
-            )}
-          </div>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "8px",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                fontSize: "14px",
-              }}
-            >
-              <span style={{ color: tokens.textSecondary }}>Status:</span>
-              <span
-                style={{
-                  color:
-                    carouselPost.post_status === "posted"
-                      ? tokens.success
-                      : carouselPost.post_status === "failed"
-                      ? tokens.danger
-                      : tokens.textPrimary,
-                  fontWeight: 500,
-                  textTransform: "capitalize",
-                }}
-              >
-                {carouselPost.post_status}
-              </span>
-            </div>
-            {carouselPost.scheduled_at && (
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  fontSize: "14px",
-                }}
-              >
-                <span style={{ color: tokens.textSecondary }}>Scheduled:</span>
-                <span style={{ color: tokens.textPrimary }}>
-                  {new Date(carouselPost.scheduled_at).toLocaleString()}
-                </span>
-              </div>
-            )}
-            {carouselPost.posted_at && (
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  fontSize: "14px",
-                }}
-              >
-                <span style={{ color: tokens.textSecondary }}>Posted:</span>
-                <span style={{ color: tokens.textPrimary }}>
-                  {new Date(carouselPost.posted_at).toLocaleString()}
-                </span>
-              </div>
-            )}
-            {carouselPost.instagram_post_id && (
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  fontSize: "14px",
-                }}
-              >
-                <span style={{ color: tokens.textSecondary }}>Instagram Post ID:</span>
-                <span style={{ color: tokens.textPrimary, fontFamily: "monospace" }}>
-                  {carouselPost.instagram_post_id}
-                </span>
-              </div>
-            )}
-            {carouselPost.post_error && (
-              <div
-                style={{
-                  padding: "12px",
-                  backgroundColor: tokens.danger + "20",
-                  borderRadius: "8px",
-                  fontSize: "14px",
-                  color: tokens.danger,
-                }}
-              >
-                Error: {carouselPost.post_error}
-              </div>
-            )}
-          </div>
-        </div>
+      {showFeedSections && carouselPost && (
+        <PostStatusPanel
+          title="Feed Post Status"
+          postStatus={carouselPost.post_status}
+          scheduledAt={carouselPost.scheduled_at}
+          postedAt={carouselPost.posted_at}
+          externalId={carouselPost.instagram_post_id}
+          externalIdLabel="Instagram Post ID"
+          postError={carouselPost.post_error}
+          onCancel={handleCancelCarousel}
+          onReschedule={handleRescheduleFailedCarousel}
+          isCanceling={isCancelingCarousel}
+          isRescheduling={isReschedulingCarousel}
+        />
       )}
 
-      {/* Dismiss panel — hides UI only; does not cancel a scheduled post */}
+      {showStorySections && storyPost && (
+        <PostStatusPanel
+          title="Story Post Status"
+          postStatus={storyPost.post_status}
+          scheduledAt={storyPost.scheduled_at}
+          postedAt={storyPost.posted_at}
+          externalId={storyPost.instagram_story_id}
+          externalIdLabel="Instagram Story ID"
+          postError={storyPost.post_error}
+          onCancel={handleCancelStory}
+          onReschedule={handleRescheduleFailedStory}
+          isCanceling={isCancelingStory}
+          isRescheduling={isReschedulingStory}
+        />
+      )}
+
       <div
         style={{
           display: "flex",
@@ -633,14 +676,174 @@ export function InstagramSchedulingPage({
           borderTop: `1px solid ${tokens.border}`,
         }}
       >
-        <Button
-          onClick={onClose}
-          variant="secondary"
-          disabled={isSubmitting || isCanceling || isRescheduling}
-        >
-          {isCarouselPosted ? "Close" : "Cancel"}
+        <Button onClick={onClose} variant="secondary" disabled={isBusy}>
+          {allPosted ? "Close" : "Cancel"}
         </Button>
       </div>
+    </div>
+  );
+}
+
+type PostStatusPanelProps = {
+  title: string;
+  postStatus: string;
+  scheduledAt: string | null;
+  postedAt: string | null;
+  externalId: string | null;
+  externalIdLabel: string;
+  postError: string | null;
+  onCancel: () => void;
+  onReschedule: () => void;
+  isCanceling: boolean;
+  isRescheduling: boolean;
+};
+
+function PostStatusPanel({
+  title,
+  postStatus,
+  scheduledAt,
+  postedAt,
+  externalId,
+  externalIdLabel,
+  postError,
+  onCancel,
+  onReschedule,
+  isCanceling,
+  isRescheduling,
+}: PostStatusPanelProps) {
+  return (
+    <div
+      style={{
+        backgroundColor: tokens.bgElevated,
+        border: `1px solid ${tokens.border}`,
+        borderRadius: "16px",
+        padding: "24px",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "16px",
+        }}
+      >
+        <h3
+          style={{
+            fontSize: "18px",
+            fontWeight: 600,
+            color: tokens.textPrimary,
+            margin: 0,
+          }}
+        >
+          {title}
+        </h3>
+        {postStatus === "failed" && (
+          <button
+            onClick={onReschedule}
+            disabled={isRescheduling}
+            style={{
+              padding: "8px 16px",
+              backgroundColor: tokens.accent,
+              color: "white",
+              border: "none",
+              borderRadius: "8px",
+              cursor: isRescheduling ? "not-allowed" : "pointer",
+              fontSize: "14px",
+              fontWeight: 500,
+            }}
+          >
+            {isRescheduling ? "Rescheduling..." : "Reschedule"}
+          </button>
+        )}
+        {postStatus === "scheduled" && (
+          <button
+            onClick={onCancel}
+            disabled={isCanceling}
+            style={{
+              padding: "8px 16px",
+              backgroundColor: tokens.danger,
+              color: "white",
+              border: "none",
+              borderRadius: "8px",
+              cursor: isCanceling ? "not-allowed" : "pointer",
+              fontSize: "14px",
+              fontWeight: 500,
+            }}
+          >
+            Cancel
+          </button>
+        )}
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+        <StatusRow label="Status" value={postStatus} highlight={postStatus} />
+        {scheduledAt && (
+          <StatusRow
+            label="Scheduled"
+            value={new Date(scheduledAt).toLocaleString()}
+          />
+        )}
+        {postedAt && (
+          <StatusRow label="Posted" value={new Date(postedAt).toLocaleString()} />
+        )}
+        {externalId && (
+          <StatusRow label={externalIdLabel} value={externalId} mono />
+        )}
+        {postError && (
+          <div
+            style={{
+              padding: "12px",
+              backgroundColor: tokens.danger + "20",
+              borderRadius: "8px",
+              fontSize: "14px",
+              color: tokens.danger,
+            }}
+          >
+            Error: {postError}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StatusRow({
+  label,
+  value,
+  highlight,
+  mono,
+}: {
+  label: string;
+  value: string;
+  highlight?: string;
+  mono?: boolean;
+}) {
+  const color =
+    highlight === "posted"
+      ? tokens.success
+      : highlight === "failed"
+      ? tokens.danger
+      : tokens.textPrimary;
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        fontSize: "14px",
+      }}
+    >
+      <span style={{ color: tokens.textSecondary }}>{label}:</span>
+      <span
+        style={{
+          color,
+          fontWeight: highlight ? 500 : 400,
+          textTransform: highlight ? "capitalize" : undefined,
+          fontFamily: mono ? "monospace" : undefined,
+        }}
+      >
+        {value}
+      </span>
     </div>
   );
 }

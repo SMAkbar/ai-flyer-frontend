@@ -9,10 +9,20 @@ export type FlyerRead = {
   cloudfront_url: string;
   s3_key: string;
   flyer_hash?: string | null;
+  event_category?: EventCategory | null;
+  event_ticket_link?: string | null;
   created_at: string;
   event_date?: string | null;
   extraction_status?: ExtractionStatus | null;
   carousel_post_status?: PostStatus | null;
+  story_post_status?: PostStatus | null;
+};
+
+export type EventCategory = "Reggae" | "Dub";
+
+export type FlyerUpdate = {
+  event_category?: EventCategory | null;
+  event_ticket_link?: string | null;
 };
 
 export type FlyerImageHashCheckResponse = {
@@ -155,6 +165,8 @@ export const flyersApi = {
     return { ok: true, data: r.data.items };
   },
   getById: (id: number) => apiClient.get<FlyerDetailRead>(`/flyers/${id}`),
+  update: (id: number, data: FlyerUpdate) =>
+    apiClient.patch<FlyerDetailRead>(`/flyers/${id}`, data),
   checkImageHash: (file: File) => {
     const fd = new FormData();
     fd.append("image", file);
