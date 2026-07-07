@@ -59,7 +59,7 @@ export default function InstagramPostingPage() {
         {flyer && (
           <InstagramSchedulingPage
             flyer={flyer}
-            onBack={() => router.push(`/flyers/${flyer.id}`)}
+            onClose={() => router.push(`/flyers/${flyer.id}`)}
           />
         )}
       </Container>

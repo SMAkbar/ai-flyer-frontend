@@ -1,7 +1,79 @@
 import type { FlyerRead, ExtractionStatus } from "@/lib/api/flyers";
+import { DEFAULT_FLYER_SORT } from "@/lib/api/flyers";
 
 export type FilterStatus = "all" | ExtractionStatus | "posted" | "extracted";
 export type SortOption = "latest" | "oldest" | "latest_event" | "oldest_event";
+
+export const DEFAULT_SORT_OPTION: SortOption = DEFAULT_FLYER_SORT;
+
+const SORT_OPTIONS: SortOption[] = [
+  "latest",
+  "oldest",
+  "latest_event",
+  "oldest_event",
+];
+
+const FILTER_OPTIONS: FilterStatus[] = [
+  "all",
+  "pending",
+  "processing",
+  "completed",
+  "extracted",
+  "posted",
+  "failed",
+];
+
+export function parseSortOption(value: string | null): SortOption {
+  if (value && SORT_OPTIONS.includes(value as SortOption)) {
+    return value as SortOption;
+  }
+  return DEFAULT_SORT_OPTION;
+}
+
+export function parseFilterStatus(value: string | null): FilterStatus {
+  if (value && FILTER_OPTIONS.includes(value as FilterStatus)) {
+    return value as FilterStatus;
+  }
+  return "all";
+}
+
+export function buildFlyersListQueryString(options: {
+  filter?: FilterStatus;
+  search?: string;
+  sort?: SortOption;
+  page?: number;
+}): string {
+  const params = new URLSearchParams();
+  const filter = options.filter ?? "all";
+  const search = (options.search ?? "").trim();
+  const sort = options.sort ?? DEFAULT_SORT_OPTION;
+  const page = options.page ?? 1;
+
+  if (filter !== "all") {
+    params.set("filter", filter);
+  }
+  if (search) {
+    params.set("search", search);
+  }
+  if (sort !== DEFAULT_SORT_OPTION) {
+    params.set("sort", sort);
+  }
+  if (page > 1) {
+    params.set("page", String(page));
+  }
+
+  return params.toString();
+}
+
+export function flyersListPath(options: {
+  filter?: FilterStatus;
+  search?: string;
+  sort?: SortOption;
+  page?: number;
+}): string {
+  const query = buildFlyersListQueryString(options);
+  return query ? `/flyers?${query}` : "/flyers";
+}
 
 /**
  * Filters and sorts flyers based on status, search query, and sort option.

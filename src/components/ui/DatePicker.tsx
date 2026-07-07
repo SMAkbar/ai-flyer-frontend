@@ -9,6 +9,8 @@ type DatePickerProps = {
   onChange: (isoDateString: string | null) => void;
   disabled?: boolean;
   placeholder?: string;
+  min?: string;
+  clearable?: boolean;
   style?: React.CSSProperties;
 };
 
@@ -38,14 +40,25 @@ export function DatePicker({
   onChange,
   disabled = false,
   placeholder = "Select date",
+  min,
+  clearable = false,
   style,
 }: DatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dateInputRef = useRef<HTMLInputElement>(null);
   const displayInputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   
   // Display formatted date (e.g., "15 January 2025")
   const displayValue = formatDateForDisplay(value);
+  const showClear = clearable && Boolean(value) && !disabled;
+
+  const handleClear = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onChange(null);
+    setIsOpen(false);
+  };
   
   // Handle native date input change
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -98,10 +111,8 @@ export function DatePicker({
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
-        dateInputRef.current &&
-        !dateInputRef.current.contains(e.target as Node) &&
-        displayInputRef.current &&
-        !displayInputRef.current.contains(e.target as Node)
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
       ) {
         setIsOpen(false);
       }
@@ -117,7 +128,7 @@ export function DatePicker({
   }, [isOpen]);
 
   return (
-    <div style={{ position: "relative", ...style }}>
+    <div ref={containerRef} style={{ position: "relative", ...style }}>
       {/* Display input (shows formatted date) */}
       <Input
         ref={displayInputRef}
@@ -131,14 +142,65 @@ export function DatePicker({
         style={{
           cursor: disabled ? "not-allowed" : "pointer",
           backgroundColor: tokens.bgElevated,
+          paddingRight: showClear ? "36px" : undefined,
         }}
       />
+
+      {showClear && (
+        <button
+          type="button"
+          onClick={handleClear}
+          aria-label="Clear date"
+          style={{
+            position: "absolute",
+            right: "10px",
+            top: "50%",
+            transform: "translateY(-50%)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "20px",
+            height: "20px",
+            padding: 0,
+            border: "none",
+            borderRadius: "999px",
+            background: "transparent",
+            color: tokens.textMuted,
+            cursor: "pointer",
+            zIndex: 2,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = tokens.textPrimary;
+            e.currentTarget.style.backgroundColor = `${tokens.textMuted}20`;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = tokens.textMuted;
+            e.currentTarget.style.backgroundColor = "transparent";
+          }}
+        >
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 12 12"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="M3 3L9 9M9 3L3 9"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+            />
+          </svg>
+        </button>
+      )}
       
       {/* Hidden native date input for picker functionality */}
       <input
         ref={dateInputRef}
         type="date"
         value={value || ""}
+        min={min}
         onChange={handleDateChange}
         onBlur={() => setIsOpen(false)}
         disabled={disabled}
@@ -146,7 +208,7 @@ export function DatePicker({
           position: "absolute",
           top: 0,
           left: 0,
-          width: "100%",
+          width: showClear ? "calc(100% - 36px)" : "100%",
           height: "100%",
           opacity: 0,
           cursor: disabled ? "not-allowed" : "pointer",

@@ -102,7 +102,10 @@ export function DateTimePicker({
     if (dateInputRef.current && !disabled) {
       // Small delay to ensure focus is set and avoid conflicts
       setTimeout(() => {
-        if (dateInputRef.current && document.activeElement === dateInputRef.current) {
+        if (
+          dateInputRef.current &&
+          document.activeElement === dateInputRef.current
+        ) {
           openDatePicker();
         }
       }, 100);
@@ -151,7 +154,10 @@ export function DateTimePicker({
     if (timeInputRef.current && !disabled) {
       // Small delay to ensure focus is set and avoid conflicts
       setTimeout(() => {
-        if (timeInputRef.current && document.activeElement === timeInputRef.current) {
+        if (
+          timeInputRef.current &&
+          document.activeElement === timeInputRef.current
+        ) {
           openTimePicker();
         }
       }, 100);
@@ -217,7 +223,7 @@ export function DateTimePicker({
       // Combine date and time into a single datetime
       const combined = `${newDate}T${newTime}`;
       const date = new Date(combined);
-      
+
       // Validate that the datetime is not in the past
       if (min && date < new Date(min)) {
         // If the combined datetime is in the past, adjust to minimum
@@ -251,7 +257,7 @@ export function DateTimePicker({
       const today = getDateValue(new Date().toISOString());
       setDateValue(today);
       const date = new Date(`${today}T${newTime}`);
-      
+
       // Validate that the datetime is not in the past
       if (min && date < new Date(min)) {
         // If the time is in the past, adjust to minimum
@@ -283,7 +289,12 @@ export function DateTimePicker({
         width: "100%",
       }}
     >
-      <div style={{ flex: isStacked ? "none" : 1, width: isStacked ? "100%" : undefined }}>
+      <div
+        style={{
+          flex: isStacked ? "none" : 1,
+          width: isStacked ? "100%" : undefined,
+        }}
+      >
         <label
           style={{
             display: "block",
@@ -305,7 +316,7 @@ export function DateTimePicker({
           onKeyDown={handleKeyDown}
           disabled={disabled || dateFieldDisabled}
           readOnly={dateFieldDisabled}
-          aria-readOnly={dateFieldDisabled ? true : undefined}
+          aria-readonly={dateFieldDisabled ? true : undefined}
           min={minDate}
           style={{
             width: "100%",
@@ -313,7 +324,12 @@ export function DateTimePicker({
           }}
         />
       </div>
-      <div style={{ flex: isStacked ? "none" : 1, width: isStacked ? "100%" : undefined }}>
+      <div
+        style={{
+          flex: isStacked ? "none" : 1,
+          width: isStacked ? "100%" : undefined,
+        }}
+      >
         <label
           style={{
             display: "block",
@@ -344,5 +360,3 @@ export function DateTimePicker({
     </div>
   );
 }
-
-

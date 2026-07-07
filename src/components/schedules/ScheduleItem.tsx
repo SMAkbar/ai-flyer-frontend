@@ -11,6 +11,27 @@ type ScheduleItemProps = {
   onCancel: () => void;
 };
 
+const postTypeColors: Record<string, string> = {
+  feed: "#6B7280",
+  story: "#7C3AED",
+  story_and_feed: "#059669",
+};
+
+function getPostTypeLabel(post: ScheduledPostWithFlyerRead): string {
+  if (post.image_type === "Feed" || post.image_type === "Story" || post.image_type === "Story + Feed") {
+    return post.image_type;
+  }
+  switch (post.post_type) {
+    case "story":
+      return "Story";
+    case "story_and_feed":
+      return "Story + Feed";
+    case "feed":
+    default:
+      return "Feed";
+  }
+}
+
 export function ScheduleItem({ post, onCancel }: ScheduleItemProps) {
   const router = useRouter();
   const [isCanceling, setIsCanceling] = useState(false);
@@ -31,11 +52,8 @@ export function ScheduleItem({ post, onCancel }: ScheduleItemProps) {
     pending: "Pending",
   };
 
-  const imageTypeLabels: Record<string, string> = {
-    time_date: "Time/Date",
-    performers: "Performers",
-    location: "Location",
-  };
+  const postType = post.post_type ?? "feed";
+  const postTypeLabel = getPostTypeLabel(post);
 
   async function handleCancel() {
     if (
@@ -53,17 +71,37 @@ export function ScheduleItem({ post, onCancel }: ScheduleItemProps) {
 
     setIsCanceling(true);
     try {
-      const result = await instagramApi.cancelScheduledPost(
-        post.flyer_id,
-        post.id
-      );
+      if (postType === "story_and_feed") {
+        const [carouselResult, storyResult] = await Promise.all([
+          instagramApi.cancelCarousel(post.flyer_id),
+          instagramApi.cancelStory(post.flyer_id),
+        ]);
 
-      if (result.ok) {
-        onCancel();
+        if (!carouselResult.ok || !storyResult.ok) {
+          const message = !carouselResult.ok
+            ? carouselResult.error.message
+            : !storyResult.ok
+              ? storyResult.error.message
+              : "Failed to cancel scheduled posts";
+          alert(message);
+          return;
+        }
+      } else if (postType === "story") {
+        const result = await instagramApi.cancelStory(post.flyer_id);
+        if (!result.ok) {
+          alert(result.error.message || "Failed to cancel scheduled story");
+          return;
+        }
       } else {
-        alert(result.error.message || "Failed to cancel scheduled post");
+        const result = await instagramApi.cancelCarousel(post.flyer_id);
+        if (!result.ok) {
+          alert(result.error.message || "Failed to cancel scheduled feed post");
+          return;
+        }
       }
-    } catch (err) {
+
+      onCancel();
+    } catch {
       alert("An unexpected error occurred");
     } finally {
       setIsCanceling(false);
@@ -78,16 +116,11 @@ export function ScheduleItem({ post, onCancel }: ScheduleItemProps) {
     router.push(`/flyers/${post.flyer_id}`);
   }
 
-  const scheduledDate = post.scheduled_at
-    ? new Date(post.scheduled_at)
-    : null;
-  const postedDate = post.posted_at
-    ? new Date(post.posted_at)
-    : null;
+  const scheduledDate = post.scheduled_at ? new Date(post.scheduled_at) : null;
+  const postedDate = post.posted_at ? new Date(post.posted_at) : null;
 
   const canCancel =
-    post.post_status === "scheduled" ||
-    post.post_status === "pending";
+    post.post_status === "scheduled" || post.post_status === "pending";
 
   return (
     <div
@@ -111,26 +144,28 @@ export function ScheduleItem({ post, onCancel }: ScheduleItemProps) {
         e.currentTarget.style.boxShadow = "none";
       }}
     >
-      {/* Image Preview */}
       <div
         style={{
           width: "100%",
-          aspectRatio: "1",
+          aspectRatio: postType === "story" || postType === "story_and_feed" ? "9 / 16" : "1",
+          maxHeight: postType === "story" || postType === "story_and_feed" ? "280px" : undefined,
           borderRadius: "8px",
           overflow: "hidden",
           flexShrink: 0,
           backgroundColor: tokens.bgHover,
+          margin: "0 auto",
         }}
       >
         {post.cloudfront_url ? (
           <img
             src={post.cloudfront_url}
-            alt={imageTypeLabels[post.image_type] || post.image_type}
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-          }}
+            alt={postTypeLabel}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: postType === "feed" ? "cover" : "contain",
+              backgroundColor: "#000",
+            }}
           />
         ) : (
           <div
@@ -140,7 +175,6 @@ export function ScheduleItem({ post, onCancel }: ScheduleItemProps) {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              backgroundColor: tokens.bgHover,
               color: tokens.textMuted,
               fontSize: "12px",
             }}
@@ -150,9 +184,15 @@ export function ScheduleItem({ post, onCancel }: ScheduleItemProps) {
         )}
       </div>
 
-      {/* Content */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "8px", minHeight: 0 }}>
-        {/* Title and Status */}
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          gap: "8px",
+          minHeight: 0,
+        }}
+      >
         <div
           style={{
             display: "flex",
@@ -173,15 +213,19 @@ export function ScheduleItem({ post, onCancel }: ScheduleItemProps) {
             >
               {post.flyer_title}
             </h3>
-            <p
+            <span
               style={{
-                fontSize: "14px",
-                color: tokens.textSecondary,
-                margin: 0,
+                display: "inline-block",
+                padding: "2px 10px",
+                borderRadius: "999px",
+                backgroundColor: `${postTypeColors[postType] ?? tokens.textSecondary}22`,
+                color: postTypeColors[postType] ?? tokens.textSecondary,
+                fontSize: "12px",
+                fontWeight: 600,
               }}
             >
-              {imageTypeLabels[post.image_type] || post.image_type}
-            </p>
+              {postTypeLabel}
+            </span>
           </div>
           <div
             style={{
@@ -198,7 +242,6 @@ export function ScheduleItem({ post, onCancel }: ScheduleItemProps) {
           </div>
         </div>
 
-        {/* Schedule Info */}
         <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
           {scheduledDate && (
             <div
@@ -208,7 +251,8 @@ export function ScheduleItem({ post, onCancel }: ScheduleItemProps) {
                 fontWeight: 500,
               }}
             >
-              📅 Scheduled: {scheduledDate.toLocaleString(undefined, {
+              Scheduled:{" "}
+              {scheduledDate.toLocaleString(undefined, {
                 year: "numeric",
                 month: "short",
                 day: "numeric",
@@ -219,7 +263,7 @@ export function ScheduleItem({ post, onCancel }: ScheduleItemProps) {
           )}
           {postedDate && (
             <div style={{ fontSize: "14px", color: tokens.textSecondary }}>
-              ✅ Posted: {postedDate.toLocaleString()}
+              Posted: {postedDate.toLocaleString()}
             </div>
           )}
           {post.post_error && (
@@ -238,12 +282,11 @@ export function ScheduleItem({ post, onCancel }: ScheduleItemProps) {
                 wordBreak: "break-word",
               }}
             >
-              ⚠️ Error: {post.post_error}
+              Error: {post.post_error}
             </div>
           )}
         </div>
 
-        {/* Actions */}
         <div
           style={{
             display: "flex",
@@ -273,4 +316,3 @@ export function ScheduleItem({ post, onCancel }: ScheduleItemProps) {
     </div>
   );
 }
-

@@ -187,6 +187,12 @@ export function GeneratedImagesSection({
       return dateB - dateA;
     });
 
+  const combinedInFlight = combinedImages.some(
+    (img) =>
+      img.generation_status === "requested" ||
+      img.generation_status === "generating"
+  );
+
   return (
     <Card
       style={{
@@ -218,7 +224,7 @@ export function GeneratedImagesSection({
           Combined Promotional Image
         </h2>
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          {isAutoRefreshing && <AutoRefreshBadge />}
+          {isAutoRefreshing && combinedInFlight && <AutoRefreshBadge />}
           {combinedImages.length > 0 && (
             <div
               style={{

@@ -12,7 +12,7 @@ import { FlyersGrid } from "@/components/flyers/FlyersGrid";
 import { PlusIcon } from "@/components/icons";
 import { flyersApi, FLYERS_LIST_PAGE_SIZE, type FlyerRead } from "@/lib/api/flyers";
 import { tokens } from "@/components/theme/tokens";
-import { type FilterStatus, type SortOption } from "@/lib/utils/flyerFilters";
+import { parseFilterStatus, parseSortOption, buildFlyersListQueryString, type FilterStatus, type SortOption } from "@/lib/utils/flyerFilters";
 
 const POLLING_INTERVAL = 5000; // 5 seconds
 
@@ -32,13 +32,15 @@ function FlyersPageContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [isListLoading, setIsListLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
-  const [sortOption, setSortOption] = useState<SortOption>("latest");
-  const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
+  const urlSearch = searchParams.get("search") || "";
+  const [searchQuery, setSearchQuery] = useState(urlSearch);
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(urlSearch);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const pageRef = useRef(1);
   const hasLoadedInitiallyRef = useRef(false);
+
+  const filterStatus = parseFilterStatus(searchParams.get("filter"));
+  const sortOption = parseSortOption(searchParams.get("sort"));
 
   const pageFromUrl = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1);
   const totalPages = Math.max(1, Math.ceil(total / FLYERS_LIST_PAGE_SIZE));
@@ -50,6 +52,38 @@ function FlyersPageContent() {
     }, 300);
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
+
+  useEffect(() => {
+    setSearchQuery((prev) => (prev === urlSearch ? prev : urlSearch));
+  }, [urlSearch]);
+
+  useEffect(() => {
+    if (debouncedSearchQuery === urlSearch) return;
+    const query = buildFlyersListQueryString({
+      filter: filterStatus,
+      search: debouncedSearchQuery,
+      sort: sortOption,
+    });
+    router.replace(query ? `${pathname}?${query}` : pathname);
+  }, [debouncedSearchQuery, urlSearch, filterStatus, sortOption, pathname, router]);
+
+  const replaceListQuery = useCallback(
+    (updates: {
+      filter?: FilterStatus;
+      search?: string;
+      sort?: SortOption;
+      page?: number;
+    }) => {
+      const query = buildFlyersListQueryString({
+        filter: updates.filter ?? filterStatus,
+        search: updates.search ?? debouncedSearchQuery,
+        sort: updates.sort ?? sortOption,
+        page: updates.page ?? currentPage,
+      });
+      router.replace(query ? `${pathname}?${query}` : pathname);
+    },
+    [currentPage, debouncedSearchQuery, filterStatus, pathname, router, sortOption]
+  );
 
   useEffect(() => {
     pageRef.current = currentPage;
@@ -210,13 +244,9 @@ function FlyersPageContent() {
     (next: number) => {
       const pages = Math.max(1, Math.ceil(total / FLYERS_LIST_PAGE_SIZE));
       const p = Math.max(1, Math.min(next, pages));
-      const params = new URLSearchParams(searchParams.toString());
-      if (p <= 1) params.delete("page");
-      else params.set("page", String(p));
-      const q = params.toString();
-      router.replace(q ? `${pathname}?${q}` : pathname);
+      replaceListQuery({ page: p });
     },
-    [pathname, router, searchParams, total]
+    [replaceListQuery, total]
   );
 
   const reloadCurrentPage = useCallback(() => {
@@ -341,7 +371,12 @@ function FlyersPageContent() {
         >
           <select
             value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value as FilterStatus)}
+            onChange={(e) =>
+              replaceListQuery({
+                filter: e.target.value as FilterStatus,
+                page: 1,
+              })
+            }
             style={{
               padding: "10px 32px 10px 14px",
               fontSize: "14px",
@@ -384,7 +419,12 @@ function FlyersPageContent() {
 
           <select
             value={sortOption}
-            onChange={(e) => setSortOption(e.target.value as SortOption)}
+            onChange={(e) =>
+              replaceListQuery({
+                sort: e.target.value as SortOption,
+                page: 1,
+              })
+            }
             style={{
               padding: "10px 32px 10px 14px",
               fontSize: "14px",
@@ -409,10 +449,10 @@ function FlyersPageContent() {
               e.target.style.boxShadow = "none";
             }}
           >
+            <option value="oldest_event">Oldest First - Event Date</option>
+            <option value="latest_event">Newest First - Event Date</option>
             <option value="latest">Newest First - Created Date</option>
             <option value="oldest">Oldest First - Created Date</option>
-            <option value="latest_event">Newest First - Event Date</option>
-            <option value="oldest_event">Oldest First - Event Date</option>
           </select>
         </div>
       </div>

@@ -113,32 +113,124 @@
   color: var(--insta-cal-selection-text) !important;
 }
 
-/* API scheduled slots — read-only, gray chip, white title (theme vars on .calWrap) */
-.slotEvent {
+/* API scheduled slots — read-only chips by post type */
+.calWrap :global(.fc-daygrid-event) {
+  border-width: 1px !important;
+  border-style: solid !important;
+  padding: 1px 4px;
+}
+
+.calWrap :global(.fc-daygrid-block-event .fc-event-main) {
+  color: inherit;
+}
+
+.calWrap :global(.fc-daygrid-dot-event) {
+  padding: 1px 4px;
+}
+
+.calWrap :global(.fc-daygrid-event-dot) {
+  border-color: inherit !important;
+}
+
+.slotEventFeed {
   cursor: default;
   border-radius: 6px;
-  border: 1px solid var(--insta-cal-slot-border) !important;
-  background-color: var(--insta-cal-slot-bg) !important;
-  color: var(--insta-cal-slot-text) !important;
+  border-color: var(--insta-cal-feed-border) !important;
+  background-color: var(--insta-cal-feed-bg) !important;
+  color: var(--insta-cal-feed-text) !important;
 }
 
-.slotEvent :global(.fc-event-main) {
-  color: var(--insta-cal-slot-text);
+.slotEventFeed :global(.fc-event-main),
+.slotEventFeed :global(.fc-event-title),
+.slotEventFeed :global(.fc-event-time) {
+  color: var(--insta-cal-feed-text) !important;
 }
 
-.slotEvent :global(.fc-event-title) {
-  color: var(--insta-cal-slot-text);
+.slotEventStory {
+  cursor: default;
+  border-radius: 6px;
+  border-color: var(--insta-cal-story-border) !important;
+  background-color: var(--insta-cal-story-bg) !important;
+  color: var(--insta-cal-story-text) !important;
+}
+
+.slotEventStory :global(.fc-event-main),
+.slotEventStory :global(.fc-event-title),
+.slotEventStory :global(.fc-event-time) {
+  color: var(--insta-cal-story-text) !important;
+}
+
+.slotEventStoryAndFeed {
+  cursor: default;
+  border-radius: 6px;
+  border-color: var(--insta-cal-bundle-border) !important;
+  background-color: var(--insta-cal-bundle-bg) !important;
+  color: var(--insta-cal-bundle-text) !important;
+}
+
+.slotEventStoryAndFeed :global(.fc-event-main),
+.slotEventStoryAndFeed :global(.fc-event-title),
+.slotEventStoryAndFeed :global(.fc-event-time) {
+  color: var(--insta-cal-bundle-text) !important;
+}
+
+.slotEventFeed :global(.fc-event-title),
+.slotEventStory :global(.fc-event-title),
+.slotEventStoryAndFeed :global(.fc-event-title) {
   font-weight: 600;
   font-size: 12px;
   line-height: 1.25;
   padding: 2px 0;
 }
 
-.slotEvent :global(.fc-event-time) {
-  color: var(--insta-cal-slot-text);
+.slotEventFeed :global(.fc-event-time),
+.slotEventStory :global(.fc-event-time),
+.slotEventStoryAndFeed :global(.fc-event-time) {
   opacity: 0.85;
   font-size: 11px;
   font-weight: 500;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--insta-cal-feed-border);
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--insta-cal-feed-text);
+}
+
+.legendSwatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  border-width: 1px;
+  border-style: solid;
+}
+
+.legendSwatchFeed {
+  background-color: var(--insta-cal-feed-bg);
+  border-color: var(--insta-cal-feed-border);
+}
+
+.legendSwatchStory {
+  background-color: var(--insta-cal-story-bg);
+  border-color: var(--insta-cal-story-border);
+}
+
+.legendSwatchStoryAndFeed {
+  background-color: var(--insta-cal-bundle-bg);
+  border-color: var(--insta-cal-bundle-border);
 }
 
 /* Portaled hover tooltip for scheduled slots */

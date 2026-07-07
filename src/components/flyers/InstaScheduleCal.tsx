@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import type { DayCellContentArg, EventHoveringArg } from "@fullcalendar/core";
+import type { DayCellContentArg, EventHoveringArg, DatesSetArg } from "@fullcalendar/core";
 import type { DateClickArg } from "@fullcalendar/interaction";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -17,6 +17,25 @@ import styles from "./InstaScheduleCal.module.css";
 
 const MIN_SCHEDULE_LEAD_MS = 60_000;
 
+/** Shared palette — calendar chips and legend swatches use the same values. */
+const SCHEDULE_TYPE_COLORS = {
+  feed: {
+    bg: "rgba(107, 114, 128, 0.55)",
+    border: "#9CA3AF",
+    text: "#F9FAFB",
+  },
+  story: {
+    bg: "rgba(124, 58, 237, 0.55)",
+    border: "#A78BFA",
+    text: "#F5F3FF",
+  },
+  story_and_feed: {
+    bg: "rgba(5, 150, 105, 0.55)",
+    border: "#34D399",
+    text: "#ECFDF5",
+  },
+} as const;
+
 export type InstaScheduleCalProps = {
   disabled?: boolean;
   /** ISO datetime from the posting form — shown on the calendar only after the editor is confirmed. */
@@ -30,13 +49,44 @@ export type InstaScheduleCalProps = {
 type SlotEventExtendedProps = {
   flyerName: string;
   timeslotIso: string;
+  postType?: ScheduledPostSlot["post_type"];
 };
+
+function slotEventClassName(postType: ScheduledPostSlot["post_type"]): string {
+  switch (postType) {
+    case "story":
+      return styles.slotEventStory;
+    case "story_and_feed":
+      return styles.slotEventStoryAndFeed;
+    case "feed":
+    default:
+      return styles.slotEventFeed;
+  }
+}
+
+function slotEventColors(postType: ScheduledPostSlot["post_type"]) {
+  const key = postType ?? "feed";
+  return SCHEDULE_TYPE_COLORS[key] ?? SCHEDULE_TYPE_COLORS.feed;
+}
+
+function formatPostTypeLabel(postType: ScheduledPostSlot["post_type"]): string {
+  switch (postType) {
+    case "story":
+      return "Story";
+    case "story_and_feed":
+      return "Story + Feed";
+    case "feed":
+    default:
+      return "Feed";
+  }
+}
 
 type HoverSlotTooltipState = {
   left: number;
   top: number;
   title: string;
   dateTimeLabel: string;
+  postTypeLabel?: string;
 };
 
 type PendingScheduleEditorState = {
@@ -141,38 +191,42 @@ export function InstaScheduleCal({
   );
   const slotsRequestIdRef = useRef(0);
 
-  useEffect(() => {
-    if (disabled) {
-      setScheduledSlots([]);
-      setSlotsLoading(false);
-      return;
-    }
-
-    const requestId = ++slotsRequestIdRef.current;
-    setSlotsLoading(true);
-
-    const now = new Date();
-    const rangeStart = new Date(now);
-    rangeStart.setDate(rangeStart.getDate() - 14);
-    const rangeEnd = new Date(now);
-    rangeEnd.setMonth(rangeEnd.getMonth() + 1);
-
-    void (async () => {
-      const res = await instagramApi.getScheduledSlotsInRange(
-        rangeStart.toISOString(),
-        rangeEnd.toISOString()
-      );
-
-      if (slotsRequestIdRef.current !== requestId) return;
-
-      setSlotsLoading(false);
-      if (res.ok) {
-        setScheduledSlots(res.data.slots);
-      } else {
+  const loadSlotsForRange = useCallback(
+    (rangeStart: Date, rangeEnd: Date) => {
+      if (disabled) {
         setScheduledSlots([]);
+        setSlotsLoading(false);
+        return;
       }
-    })();
-  }, [disabled]);
+
+      const requestId = ++slotsRequestIdRef.current;
+      setSlotsLoading(true);
+
+      void (async () => {
+        const res = await instagramApi.getScheduledSlotsInRange(
+          rangeStart.toISOString(),
+          rangeEnd.toISOString()
+        );
+
+        if (slotsRequestIdRef.current !== requestId) return;
+
+        setSlotsLoading(false);
+        if (res.ok) {
+          setScheduledSlots(res.data.slots);
+        } else {
+          setScheduledSlots([]);
+        }
+      })();
+    },
+    [disabled]
+  );
+
+  const handleDatesSet = useCallback(
+    (arg: DatesSetArg) => {
+      loadSlotsForRange(arg.start, arg.end);
+    },
+    [loadSlotsForRange]
+  );
 
   useEffect(() => {
     setHoverTooltip(null);
@@ -224,6 +278,7 @@ export function InstaScheduleCal({
       top,
       title: ep.flyerName,
       dateTimeLabel: formatSlotDateTime(ep.timeslotIso),
+      postTypeLabel: ep.postType ? formatPostTypeLabel(ep.postType) : undefined,
     });
   }, []);
 
@@ -293,26 +348,36 @@ export function InstaScheduleCal({
 
   const navigationValidRange = useMemo(() => {
     const now = new Date();
+    // Only constrain the past; omit `end` so users can navigate to any future month.
     const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const end = new Date(now.getFullYear(), now.getMonth() + 2, 1);
-    return { start, end };
+    return { start };
   }, []);
 
   const calendarEvents = useMemo(() => {
-    const apiEvents = scheduledSlots.map((slot, index) => ({
-      id: `scheduled-slot-${slot.timeslot}-${index}`,
-      title: slot.flyer_name,
-      start: slot.timeslot,
-      allDay: false,
-      editable: false,
-      startEditable: false,
-      durationEditable: false,
-      classNames: [styles.slotEvent],
-      extendedProps: {
-        flyerName: slot.flyer_name,
-        timeslotIso: slot.timeslot,
-      } satisfies SlotEventExtendedProps,
-    }));
+    const apiEvents = scheduledSlots.map((slot, index) => {
+      const postType = slot.post_type ?? "feed";
+      const colors = slotEventColors(postType);
+
+      return {
+        id: `scheduled-slot-${slot.timeslot}-${index}`,
+        title: slot.flyer_name,
+        start: slot.timeslot,
+        allDay: false,
+        editable: false,
+        startEditable: false,
+        durationEditable: false,
+        backgroundColor: colors.bg,
+        borderColor: colors.border,
+        textColor: colors.text,
+        display: "block" as const,
+        classNames: [slotEventClassName(postType)],
+        extendedProps: {
+          flyerName: slot.flyer_name,
+          timeslotIso: slot.timeslot,
+          postType,
+        } satisfies SlotEventExtendedProps,
+      };
+    });
 
     if (
       !onSelectScheduledAt ||
@@ -330,6 +395,10 @@ export function InstaScheduleCal({
       editable: false,
       startEditable: false,
       durationEditable: false,
+      backgroundColor: "rgba(229, 9, 20, 0.22)",
+      borderColor: tokens.accent,
+      textColor: tokens.textPrimary,
+      display: "block" as const,
       classNames: [styles.selectionEvent],
       extendedProps: {
         flyerName: selectionEventTitle,
@@ -369,9 +438,15 @@ export function InstaScheduleCal({
       ["--fc-highlight-color" as string]: "rgba(229, 9, 20, 0.22)",
       ["--fc-today-bg-color" as string]: "transparent",
       ["--fc-now-indicator-color" as string]: tokens.accent,
-      ["--insta-cal-slot-bg" as string]: "#2E2E2E",
-      ["--insta-cal-slot-border" as string]: tokens.border,
-      ["--insta-cal-slot-text" as string]: "#FFFFFF",
+      ["--insta-cal-feed-bg" as string]: SCHEDULE_TYPE_COLORS.feed.bg,
+      ["--insta-cal-feed-border" as string]: SCHEDULE_TYPE_COLORS.feed.border,
+      ["--insta-cal-feed-text" as string]: SCHEDULE_TYPE_COLORS.feed.text,
+      ["--insta-cal-story-bg" as string]: SCHEDULE_TYPE_COLORS.story.bg,
+      ["--insta-cal-story-border" as string]: SCHEDULE_TYPE_COLORS.story.border,
+      ["--insta-cal-story-text" as string]: SCHEDULE_TYPE_COLORS.story.text,
+      ["--insta-cal-bundle-bg" as string]: SCHEDULE_TYPE_COLORS.story_and_feed.bg,
+      ["--insta-cal-bundle-border" as string]: SCHEDULE_TYPE_COLORS.story_and_feed.border,
+      ["--insta-cal-bundle-text" as string]: SCHEDULE_TYPE_COLORS.story_and_feed.text,
       ["--insta-cal-selection-text" as string]: tokens.textPrimary,
     } as React.CSSProperties;
   }, []);
@@ -385,9 +460,10 @@ export function InstaScheduleCal({
         borderRadius: 12,
         opacity: disabled ? 0.6 : 1,
         pointerEvents: disabled ? "none" : "auto",
+        ...themeVars,
       }}
     >
-      <div className={styles.calWrap} style={{ ...themeVars, minHeight: 480 }}>
+      <div className={styles.calWrap} style={{ minHeight: 480 }}>
         {slotsLoading ? (
           <div className={styles.loadingOverlay} aria-busy="true" aria-live="polite">
             <LoadingSpinner message="Loading schedule…" size={22} />
@@ -397,6 +473,7 @@ export function InstaScheduleCal({
           plugins={[dayGridPlugin, interactionPlugin]}
           initialView="dayGridMonth"
           validRange={navigationValidRange}
+          datesSet={handleDatesSet}
           headerToolbar={{
             left: "prev,next today",
             center: "title",
@@ -415,6 +492,22 @@ export function InstaScheduleCal({
           eventMouseEnter={handleEventMouseEnter}
           eventMouseLeave={handleEventMouseLeave}
         />
+      </div>
+      <div className={styles.legend} aria-label="Schedule type legend">
+        <span className={styles.legendItem}>
+          <span className={`${styles.legendSwatch} ${styles.legendSwatchFeed}`} />
+          Feed
+        </span>
+        <span className={styles.legendItem}>
+          <span className={`${styles.legendSwatch} ${styles.legendSwatchStory}`} />
+          Story
+        </span>
+        <span className={styles.legendItem}>
+          <span
+            className={`${styles.legendSwatch} ${styles.legendSwatchStoryAndFeed}`}
+          />
+          Story + Feed
+        </span>
       </div>
       {typeof document !== "undefined" &&
         hoverTooltip &&
@@ -439,6 +532,9 @@ export function InstaScheduleCal({
               className={styles.slotPopoverMeta}
               style={{ color: tokens.textSecondary }}
             >
+              {hoverTooltip.postTypeLabel && (
+                <span>{hoverTooltip.postTypeLabel} · </span>
+              )}
               {hoverTooltip.dateTimeLabel}
             </div>
           </div>,

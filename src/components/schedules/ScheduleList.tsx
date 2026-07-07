@@ -153,7 +153,11 @@ export function ScheduleList({
               }}
             >
               {posts.map((post) => (
-                <ScheduleItem key={post.id} post={post} onCancel={onRefresh} />
+                <ScheduleItem
+                  key={`${post.post_type ?? "feed"}-${post.carousel_post_id ?? "c"}-${post.story_post_id ?? "s"}-${post.flyer_id}-${post.scheduled_at}`}
+                  post={post}
+                  onCancel={onRefresh}
+                />
               ))}
             </div>
           )

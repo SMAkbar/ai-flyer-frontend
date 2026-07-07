@@ -6,14 +6,16 @@ import { PageLayout } from "@/components/ui/PageLayout";
 import { Container } from "@/components/ui/Container";
 import { BackButton } from "@/components/ui/BackButton";
 import { Button } from "@/components/ui/Button";
-import { flyersApi, type FlyerDetailRead, type FlyerRead, type FlyerInformationExtractionUpdate } from "@/lib/api/flyers";
+import { flyersApi, type FlyerDetailRead, type FlyerRead, type FlyerInformationExtractionUpdate, type FlyerUpdate } from "@/lib/api/flyers";
 import { wordpressApi, type WordPressPostRead } from "@/lib/api/wordpress";
 import { FlyerImageCard } from "@/components/flyers/FlyerImageCard";
 import { FlyerHeader } from "@/components/flyers/FlyerHeader";
+import { FlyerEventDetailsCard } from "@/components/flyers/FlyerEventDetailsCard";
 import { ExtractionCard, type EditedFields } from "@/components/flyers/ExtractionCard";
 import { GeneratedImagesSection } from "@/components/flyers/GeneratedImagesSection";
 import { WordPressPostingCard } from "@/components/flyers/WordPressPostingCard";
-import { filterAndSortFlyers, type FilterStatus, type SortOption } from "@/lib/utils/flyerFilters";
+import { InstagramSchedulingPage } from "@/components/flyers/InstagramSchedulingPage";
+import { DEFAULT_SORT_OPTION, filterAndSortFlyers, flyersListPath, parseFilterStatus, parseSortOption, type FilterStatus, type SortOption } from "@/lib/utils/flyerFilters";
 
 type AdjacentFlyers = {
   prev: FlyerRead | null;
@@ -44,6 +46,22 @@ function hasInFlightExtraction(flyer: FlyerDetailRead | null): boolean {
   return status === "pending" || status === "processing";
 }
 
+function instagramScheduleButtonLabel(flyer: FlyerDetailRead): string {
+  const carousel = flyer.carousel_post_status;
+  const story = flyer.story_post_status;
+
+  if (carousel === "posted" && story === "posted") {
+    return "Instagram Posted";
+  }
+  if (carousel === "posted" || story === "posted") {
+    return "Instagram Partially Posted";
+  }
+  if (carousel === "scheduled" || story === "scheduled") {
+    return "Instagram Scheduled";
+  }
+  return "Schedule Instagram Posts";
+}
+
 async function refreshUntilImageGenerationInFlight(
   flyerId: number,
   setFlyerData: (data: FlyerDetailRead) => void
@@ -65,16 +83,17 @@ export default function FlyerDetailPage() {
   const searchParams = useSearchParams();
   const flyerId = params?.id ? parseInt(params.id as string, 10) : null;
 
-  // Read filter params from URL, defaulting to "all", "", "latest"
-  const filterStatus = (searchParams.get("filter") as FilterStatus) || "all";
+  // Read list context from URL so back navigation restores filters/sort.
+  const filterStatus = parseFilterStatus(searchParams.get("filter"));
   const searchQuery = searchParams.get("search") || "";
-  const sortOption = (searchParams.get("sort") as SortOption) || "latest";
+  const sortOption = parseSortOption(searchParams.get("sort"));
 
   const [flyer, setFlyer] = useState<FlyerDetailRead | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editedFields, setEditedFields] = useState<EditedFields>({});
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isSavingEventDetails, setIsSavingEventDetails] = useState(false);
   // Transient flags for the brief window between clicking an action and the
   // server responding. After that, "in-flight" state is derived from the
   // flyer payload itself so the UI stays correct across page reloads.
@@ -82,6 +101,7 @@ export default function FlyerDetailPage() {
   const [isStartingRetry, setIsStartingRetry] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
   const [showWordPressPosting, setShowWordPressPosting] = useState(false);
+  const [showInstagramScheduling, setShowInstagramScheduling] = useState(false);
   const [wordpressPost, setWordpressPost] = useState<WordPressPostRead | null>(null);
   const [adjacentFlyers, setAdjacentFlyers] = useState<AdjacentFlyers>({ prev: null, next: null });
 
@@ -92,8 +112,9 @@ export default function FlyerDetailPage() {
 
   useEffect(() => {
     if (flyerId) {
-      // Reset edited fields when changing flyers
+      // Reset edited fields and inline panels when changing flyers
       setEditedFields({});
+      setShowInstagramScheduling(false);
       loadFlyer();
       loadWordPressPost();
       loadAdjacentFlyers();
@@ -221,7 +242,14 @@ export default function FlyerDetailPage() {
     const extraction = flyer.information_extraction;
     
     return Object.entries(editedFields).some(([key, value]) => {
-      const originalValue = extraction[key as keyof typeof extraction] ?? '';
+      const fieldKey = key as keyof EditedFields;
+      const rawOriginal = extraction[fieldKey as keyof typeof extraction];
+      if (fieldKey === "event_end_date" || fieldKey === "event_date") {
+        const originalValue = rawOriginal ?? null;
+        const normalizedValue = value.trim() ? value.trim() : null;
+        return normalizedValue !== originalValue;
+      }
+      const originalValue = rawOriginal ?? '';
       return value !== originalValue;
     });
   }, [flyer, editedFields]);
@@ -236,9 +264,17 @@ export default function FlyerDetailPage() {
     
     for (const [key, value] of Object.entries(editedFields)) {
       const fieldKey = key as keyof EditedFields;
-      const originalValue = extraction[fieldKey as keyof typeof extraction] ?? '';
-      if (value !== originalValue) {
-        updateData[fieldKey] = value.trim() || null;
+      const rawOriginal = extraction[fieldKey as keyof typeof extraction];
+      const originalValue =
+        fieldKey === "event_end_date" || fieldKey === "event_date"
+          ? (rawOriginal ?? null)
+          : (rawOriginal ?? "");
+      const normalizedValue =
+        fieldKey === "event_end_date" || fieldKey === "event_date"
+          ? (value.trim() ? value.trim() : null)
+          : value;
+      if (normalizedValue !== originalValue) {
+        updateData[fieldKey] = normalizedValue;
       }
     }
 
@@ -266,6 +302,7 @@ export default function FlyerDetailPage() {
           };
         });
         setEditedFields({});
+        setShowInstagramScheduling(false);
       } else {
         setError(result.error.message || "Failed to save changes");
       }
@@ -281,6 +318,31 @@ export default function FlyerDetailPage() {
     setEditedFields({});
   }, []);
 
+  const handleSaveEventDetails = useCallback(
+    async (updateData: FlyerUpdate): Promise<boolean> => {
+      if (!flyerId) return false;
+
+      setIsSavingEventDetails(true);
+      setError(null);
+
+      try {
+        const result = await flyersApi.update(flyerId, updateData);
+        if (result.ok) {
+          setFlyer(result.data);
+          return true;
+        }
+        setError(result.error.message || "Failed to save event details");
+        return false;
+      } catch {
+        setError("An unexpected error occurred while saving event details");
+        return false;
+      } finally {
+        setIsSavingEventDetails(false);
+      }
+    },
+    [flyerId]
+  );
+
   // Helper function to build navigation URL with query params
   const buildNavigationUrl = useCallback((flyerId: number) => {
     const params = new URLSearchParams();
@@ -290,33 +352,66 @@ export default function FlyerDetailPage() {
     if (searchQuery.trim()) {
       params.set("search", searchQuery);
     }
-    if (sortOption !== "latest") {
+    if (sortOption !== DEFAULT_SORT_OPTION) {
       params.set("sort", sortOption);
     }
     const queryString = params.toString();
     return queryString ? `/flyers/${flyerId}?${queryString}` : `/flyers/${flyerId}`;
   }, [filterStatus, searchQuery, sortOption]);
 
+  const navigateToAdjacentFlyer = useCallback(
+    (direction: "prev" | "next") => {
+      const target = adjacentFlyers[direction];
+      if (!target) return;
+      router.push(buildNavigationUrl(target.id));
+    },
+    [adjacentFlyers, buildNavigationUrl, router]
+  );
+
+  // Shift+< and Shift+> keyboard shortcuts for prev/next flyer navigation
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) return;
+
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          target.closest("input, textarea, select, [contenteditable='true']"))
+      ) {
+        return;
+      }
+
+      if (event.key === "<") {
+        if (!adjacentFlyers.prev) return;
+        event.preventDefault();
+        navigateToAdjacentFlyer("prev");
+      } else if (event.key === ">") {
+        if (!adjacentFlyers.next) return;
+        event.preventDefault();
+        navigateToAdjacentFlyer("next");
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [adjacentFlyers, navigateToAdjacentFlyer]);
+
   // Handler to navigate back to flyers page, preserving filter params
   const handleBackToFlyers = useCallback(() => {
-    const params = new URLSearchParams();
-    if (filterStatus !== "all") {
-      params.set("filter", filterStatus);
-    }
-    if (searchQuery.trim()) {
-      params.set("search", searchQuery);
-    }
-    if (sortOption !== "latest") {
-      params.set("sort", sortOption);
-    }
-    const queryString = params.toString();
-    const url = queryString ? `/flyers?${queryString}` : `/flyers`;
-    router.push(url);
+    router.push(
+      flyersListPath({
+        filter: filterStatus,
+        search: searchQuery,
+        sort: sortOption,
+      })
+    );
   }, [router, filterStatus, searchQuery, sortOption]);
 
   const handleGenerateImages = async () => {
     if (!flyerId || !flyer?.information_extraction) return;
 
+    setShowInstagramScheduling(false);
     setIsStartingGeneration(true);
     setError(null);
 
@@ -421,7 +516,7 @@ export default function FlyerDetailPage() {
           }}>
             {adjacentFlyers.prev && (
               <button
-                onClick={() => router.push(buildNavigationUrl(adjacentFlyers.prev!.id))}
+                onClick={() => navigateToAdjacentFlyer("prev")}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -461,7 +556,7 @@ export default function FlyerDetailPage() {
             
             {adjacentFlyers.next && (
               <button
-                onClick={() => router.push(buildNavigationUrl(adjacentFlyers.next!.id))}
+                onClick={() => navigateToAdjacentFlyer("next")}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -565,6 +660,13 @@ export default function FlyerDetailPage() {
                     flyer.generated_images.length > 0
                   }
                 />
+
+                <FlyerEventDetailsCard
+                  eventCategory={flyer.event_category ?? null}
+                  eventTicketLink={flyer.event_ticket_link ?? null}
+                  isSaving={isSavingEventDetails}
+                  onSave={handleSaveEventDetails}
+                />
               </div>
             </div>
 
@@ -579,10 +681,11 @@ export default function FlyerDetailPage() {
                 {flyer.generated_images && flyer.generated_images.length > 0 && (
                   <div style={{ marginTop: "24px", display: "flex", gap: "16px", flexWrap: "wrap" }}>
                     <Button
-                      onClick={() => router.push(`/flyers/${flyer.id}/instagram`)}
+                      onClick={() => setShowInstagramScheduling(true)}
                       variant="primary"
+                      disabled={isGeneratingImages}
                     >
-                      Schedule Instagram Posts
+                      {instagramScheduleButtonLabel(flyer)}
                     </Button>
                     <Button
                       onClick={() => setShowWordPressPosting(true)}
@@ -595,6 +698,14 @@ export default function FlyerDetailPage() {
                         : "Post to WordPress"}
                     </Button>
                   </div>
+                )}
+
+                {showInstagramScheduling && (
+                  <InstagramSchedulingPage
+                    flyer={flyer}
+                    embedded
+                    onClose={() => setShowInstagramScheduling(false)}
+                  />
                 )}
                 
                 {/* WordPress Posting Modal/Card */}

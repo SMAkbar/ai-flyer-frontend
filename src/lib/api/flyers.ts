@@ -9,16 +9,26 @@ export type FlyerRead = {
   cloudfront_url: string;
   s3_key: string;
   flyer_hash?: string | null;
+  event_category?: EventCategory | null;
+  event_ticket_link?: string | null;
   created_at: string;
   event_date?: string | null;
   extraction_status?: ExtractionStatus | null;
   carousel_post_status?: PostStatus | null;
+  story_post_status?: PostStatus | null;
+};
+
+export type EventCategory = "Reggae" | "Dub";
+
+export type FlyerUpdate = {
+  event_category?: EventCategory | null;
+  event_ticket_link?: string | null;
 };
 
 export type FlyerImageHashCheckResponse = {
   flyer_hash: string;
   is_duplicate: boolean;
-  existing_flyer: { id: number; title: string } | null;
+  existing_flyer: { id: number; title: string; is_archived: boolean } | null;
 };
 
 export type FlyerBulkHashCheckResponse = {
@@ -29,6 +39,7 @@ export type FlyerBulkHashCheckResponse = {
     existing_flyer_id: number;
     existing_flyer_title: string | null;
     existing_flyer_user_id: number | null;
+    existing_flyer_is_archived: boolean;
   }>;
   duplicates_in_request: Array<{
     flyer_hash: string;
@@ -43,6 +54,7 @@ export type FlyerInformationExtraction = {
   flyer_id: number;
   status: ExtractionStatus;
   event_date: string | null; // ISO date string (YYYY-MM-DD format)
+  event_end_date: string | null; // ISO date string (YYYY-MM-DD format), optional
   location_town_city: string | null;
   country: string | null; // Country name (e.g., "United Kingdom", "Germany")
   event_title: string | null;
@@ -56,7 +68,11 @@ export type FlyerInformationExtraction = {
   updated_at: string;
 };
 
-export type GeneratedImageType = "time_date" | "performers" | "location" | "combined";
+export type GeneratedImageType =
+  | "time_date"
+  | "performers"
+  | "location"
+  | "combined";
 
 export type ImageGenerationStatus = "requested" | "generating" | "generated" | "failed";
 
@@ -78,6 +94,7 @@ export type FlyerDetailRead = FlyerRead & {
 
 export type FlyerInformationExtractionUpdate = {
   event_date?: string | null; // ISO date string (YYYY-MM-DD format)
+  event_end_date?: string | null; // ISO date string (YYYY-MM-DD format)
   location_town_city?: string | null;
   country?: string | null; // Country name (e.g., "United Kingdom", "Germany")
   event_title?: string | null;
@@ -103,6 +120,8 @@ export type FlyerListStatusFilter =
   | "failed";
 export type FlyerListSort = "latest" | "oldest" | "latest_event" | "oldest_event";
 
+export const DEFAULT_FLYER_SORT: FlyerListSort = "oldest_event";
+
 export type FlyerListPageResponse = {
   items: FlyerRead[];
   total: number;
@@ -125,7 +144,7 @@ function flyersListPath(params: {
   if (params.status && params.status !== "all") {
     q.set("status", params.status);
   }
-  if (params.sort && params.sort !== "latest") {
+  if (params.sort && params.sort !== DEFAULT_FLYER_SORT) {
     q.set("sort", params.sort);
   }
   return `/flyers?${q.toString()}`;
@@ -146,6 +165,8 @@ export const flyersApi = {
     return { ok: true, data: r.data.items };
   },
   getById: (id: number) => apiClient.get<FlyerDetailRead>(`/flyers/${id}`),
+  update: (id: number, data: FlyerUpdate) =>
+    apiClient.patch<FlyerDetailRead>(`/flyers/${id}`, data),
   checkImageHash: (file: File) => {
     const fd = new FormData();
     fd.append("image", file);
