@@ -368,7 +368,7 @@ export default function FlyerDetailPage() {
     [adjacentFlyers, buildNavigationUrl, router]
   );
 
-  // Shift+< and Shift+> keyboard shortcuts for prev/next flyer navigation
+  // Shift+Arrow keyboard shortcuts for prev/next flyer navigation
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (!event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) return;
@@ -382,11 +382,11 @@ export default function FlyerDetailPage() {
         return;
       }
 
-      if (event.key === "<") {
+      if (event.key === "ArrowLeft") {
         if (!adjacentFlyers.prev) return;
         event.preventDefault();
         navigateToAdjacentFlyer("prev");
-      } else if (event.key === ">") {
+      } else if (event.key === "ArrowRight") {
         if (!adjacentFlyers.next) return;
         event.preventDefault();
         navigateToAdjacentFlyer("next");
